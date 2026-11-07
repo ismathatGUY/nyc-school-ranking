@@ -1,0 +1,79 @@
+[ela] raw rows: 33,793
+[ela] after filtering: 4,481
+[ela] duplicate school-years: 0
+[ela] rows with suppressed values: 38
+[ela] rows where level counts != tested (excluding suppressed): 0
+[ela] max gap reported vs recomputed %: 0.0000
+[ela] kept: 4,435
+[math] raw rows: 33,101
+[math] after filtering: 4,481
+[math] duplicate school-years: 0
+[math] rows with suppressed values: 142
+[math] rows where level counts != tested (excluding suppressed): 0
+[math] max gap reported vs recomputed %: 0.0000
+[math] kept: 4,332
+[merge] school-years with both subjects: 4,322
+[merge] ELA rows dropped: 113, Math rows dropped: 10
+[merge] schools in 2026: 1104
+      DBN                School Name  Year  n_ela  k_ela  n_math  k_math     p_ela    p_math
+0  01M015  P.S. 015 ROBERTO CLEMENTE  2026     64   19.0      66    30.0  0.296875  0.454545
+1  01M015  P.S. 015 ROBERTO CLEMENTE  2025     70   47.0      72    43.0  0.671429  0.597222
+2  01M015  P.S. 015 ROBERTO CLEMENTE  2024     64   29.0      64    39.0  0.453125  0.609375
+3  01M020       P.S. 020 ANNA SILVER  2026    122   35.0     123    35.0  0.286885  0.284553
+4  01M020       P.S. 020 ANNA SILVER  2025    108   40.0     123    42.0  0.370370  0.341463
+[shrink] ela: citywide rate 0.507, between-school variance 0.0322
+[shrink] math: citywide rate 0.577, between-school variance 0.0392
+[rank] schools ranked in 2026: 1104
+                                            School Name     p_ela    p_math         z  rank
+60    NEW EXPLORATIONS INTO SCIENCE, TECHNOLOGY AND ...  0.971550  0.991334  2.541303     1
+1683                           P.S. 011 PURVIS J. BEHAN  0.957071  0.982234  2.461368     2
+776       LEADERS OF EXCELLENCE, ADVOCACY AND DISCOVERY  0.966667  1.000000  2.440691     3
+945                     P.S./M.S. 004 CROTONA PARK WEST  0.978723  0.972028  2.424951     4
+3988          BACCALAUREATE SCHOOL FOR GLOBAL EDUCATION  0.984615  0.985294  2.423601     5
+377                                SPECIAL MUSIC SCHOOL  0.976471  1.000000  2.406658     6
+357                                 THE ANDERSON SCHOOL  0.949438  0.965986  2.390799     7
+112                            P.S. 77 LOWER LAB SCHOOL  0.953488  0.977011  2.387886     8
+3965              THE 30TH AVENUE SCHOOL (G&T CITYWIDE)  0.935754  0.973684  2.372863     9
+4024                    NAPLES STREET ELEMENTARY SCHOOL  0.958042  0.972222  2.370639    10
+z_ela mean and std: -0.0 1.0
+[uncertainty] median 90% rank range: 132 places
+rank
+(0, 10]         10.0
+(10, 100]       36.0
+(100, 500]     112.0
+(500, 900]     186.0
+(900, 1200]    129.0
+Name: range_width, dtype: float64
+[sensitivity] compared with the baseline ranking:
+  No small-school adjustment: rank correlation 1.000, top-100 overlap 99, schools moving 50+ places 4
+  ELA-heavy 60/40: rank correlation 0.998, top-100 overlap 97, schools moving 50+ places 22
+  Math-heavy 40/60: rank correlation 0.998, top-100 overlap 98, schools moving 50+ places 17
+[export] saved 1104 schools to school_rankings_2026.csv
+      rank     DBN                                        School Name    borough  n_ela  n_math  p_ela  p_math      z   lo    hi
+16       1  01M539  NEW EXPLORATIONS INTO SCIENCE, TECHNOLOGY AND ...  Manhattan    703     577  0.972   0.991  2.541  1.0   1.0
+431      2  13K011                           P.S. 011 PURVIS J. BEHAN   Brooklyn    396     394  0.957   0.982  2.461  2.0   5.0
+200      3  07X359      LEADERS OF EXCELLENCE, ADVOCACY AND DISCOVERY      Bronx    120     117  0.967   1.000  2.441  3.0  14.0
+243      4  09X004                    P.S./M.S. 004 CROTONA PARK WEST      Bronx    141     143  0.979   0.972  2.425  3.0  12.0
+1019     5  30Q580          BACCALAUREATE SCHOOL FOR GLOBAL EDUCATION     Queens    130      68  0.985   0.985  2.424  3.0  17.0
+borough
+Bronx           -0.68
+Brooklyn         0.04
+Manhattan       -0.29
+Queens           0.24
+Staten Island    0.37
+Name: z, dtype: float64
+borough
+Manhattan        39
+Brooklyn         28
+Queens           22
+Staten Island     6
+Bronx             5
+Name: count, dtype: int64
+share of schools with rank range <= 50: 0.11
+               schools  top100  pct_top100
+borough                                   
+Bronx              249       5         2.0
+Brooklyn           344      28         8.1
+Manhattan          179      39        21.8
+Queens             268      22         8.2
+Staten Island       64       6         9.4

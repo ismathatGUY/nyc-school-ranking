@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYC School Performance Ranking, 2026</title>
+<script>
+try {
+  var storedTheme = localStorage.getItem("school-rank-theme");
+  var theme = storedTheme === "light" || storedTheme === "dark"
+    ? storedTheme
+    : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+} catch (e) {}
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f0e8;
+    --card: #fffdf9;
+    --text: #1c1917;
+    --muted: #57534e;
+    --line: #e4dfd4;
+    --accent: #0f766e;
+    --input: #ffffff;
+    --hover: #f3efe6;
+    --selected: #e4f4f1;
+    --ref: #a8a29e;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141311;
+    --card: #1e1c19;
+    --text: #f5f2eb;
+    --muted: #a8a29e;
+    --line: #3a3632;
+    --accent: #5eead4;
+    --input: #161513;
+    --hover: #2a2723;
+    --selected: #1a3330;
+    --ref: #78716c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0; letter-spacing: -0.02em; }
+  h2 { font-size: 0.95rem; margin: 0 0 10px; }
+  h3 { font-size: 1.05rem; line-height: 1.3; margin: 0; }
+  .note { margin: 12px 0 0; max-width: 78ch; color: var(--muted); }
+
+  button, input, select { font: inherit; color: inherit; }
+  .ghost {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    align-items: flex-end;
+    margin: 18px 0;
+  }
+  .controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--muted);
+  }
+  input[type="search"], select {
+    background: var(--input);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-weight: 450;
+    color: var(--text);
+  }
+  input[type="search"] { width: min(380px, 86vw); }
+  select { min-width: 160px; }
+  #count { margin: 0 0 8px auto; color: var(--muted); font-size: 14px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
+    gap: 16px;
+    align-items: start;
+  }
+  aside { display: flex; flex-direction: column; gap: 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .table-card { padding: 0; }
+  .table-scroll { max-height: min(78vh, 920px); overflow: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  caption.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    padding: 0;
+    font-weight: 650;
+  }
+  thead button {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+    font-weight: 650;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+  }
+  thead th.num button { justify-content: flex-end; }
+  thead button:hover { color: var(--accent); }
+  .arrow { display: inline-block; width: 0.9em; text-align: center; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.num, .num { font-variant-numeric: tabular-nums; }
+  td.num { text-align: right; white-space: nowrap; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover td { background: var(--hover); }
+  tbody tr.selected td { background: var(--selected); }
+  tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  td.empty, .placeholder { color: var(--muted); cursor: default; }
+  td.empty { text-align: left; padding: 16px 10px; }
+
+  .meta { margin: 4px 0 12px; color: var(--muted); font-size: 13px; }
+  dl { display: grid; gap: 8px; margin: 0; }
+  dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+  }
+  dt { color: var(--muted); font-size: 13px; }
+  dd { margin: 0; text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .sub { display: block; font-weight: 450; color: var(--muted); font-size: 12px; }
+
+  figure { margin: 0; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .tick { fill: var(--muted); font-size: 12px; }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  .ref { stroke: var(--ref); stroke-width: 1.25; stroke-dasharray: 4 4; }
+  .dot { stroke: var(--card); stroke-width: 0.8; cursor: pointer; }
+  .dot.selected { stroke: var(--text); stroke-width: 2.4; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 6px;
+    font-size: 13px;
+  }
+  .legend i {
+    display: inline-block;
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: baseline;
+  }
+  #hoverReadout { min-height: 2.6em; margin: 0; color: var(--muted); font-size: 13px; }
+  .caption { margin: 0; color: var(--muted); font-size: 13px; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    #count { margin-left: 0; }
+    h1 { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>NYC School Performance Ranking, 2026</h1>
+      <p class="note">Ranks in the middle are uncertain, which is why a rank range is shown. Schools near the middle have very similar scores, so a small change in test results can move one of them by a hundred places or more. Schools at the top and bottom move much less, and their ranges stay narrow.</p>
+    </div>
+    <button type="button" class="ghost" id="themeBtn">Dark mode</button>
+  </header>
+
+  <div class="controls">
+    <label>Search
+      <input id="q" type="search" placeholder="Filter by school name" autocomplete="off" spellcheck="false">
+    </label>
+    <label>Borough
+      <select id="borough">
+        <option value="">All</option>
+        <option>Bronx</option>
+        <option>Brooklyn</option>
+        <option>Manhattan</option>
+        <option>Queens</option>
+        <option>Staten Island</option>
+      </select>
+    </label>
+    <p id="count" aria-live="polite"></p>
+  </div>
+
+  <div class="layout">
+    <section class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <caption class="sr-only">Schools ranked by combined ELA and math proficiency. Choose a row to see that school's numbers.</caption>
+          <thead>
+            <tr>
+              <th scope="col" class="num" aria-sort="none"><button type="button" data-key="rank">Rank<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" aria-sort="none"><button type="button" data-key="name">School<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" aria-sort="none"><button type="button" data-key="borough">Borough<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" class="num" aria-sort="none"><button type="button" data-key="ela">ELA % proficient<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" class="num" aria-sort="none"><button type="button" data-key="math">Math % proficient<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" class="num" aria-sort="none"><button type="button" data-key="z">Score (z)<span class="arrow" aria-hidden="true"></span></button></th>
+              <th scope="col" class="num" aria-sort="none"><button type="button" data-key="range">Rank range (lo-hi)<span class="arrow" aria-hidden="true"></span></button></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside>
+      <section class="card" aria-labelledby="detailHeading">
+        <h2 id="detailHeading">School</h2>
+        <div id="detailBody" aria-live="polite"></div>
+      </section>
+      <section class="card">
+        <h2>ELA % vs Math %</h2>
+        <figure>
+          <svg id="plot" viewBox="0 0 640 460" role="img" aria-label="Scatter plot of ELA percent proficient versus math percent proficient. Click a point to select a school."></svg>
+          <figcaption>
+            <ul class="legend" id="legend"></ul>
+            <p class="caption">Dashed line: ELA % equals Math %. Vertical axis is Math, horizontal axis is ELA.</p>
+            <p id="hoverReadout">Click a point to select a school.</p>
+          </figcaption>
+        </figure>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const SCHOOLS = [
+{"rank":1,"dbn":"01M539","name":"NEW EXPLORATIONS INTO SCIENCE, TECHNOLOGY AND MATH","borough":"Manhattan","nEla":703,"nMath":577,"ela":0.972,"math":0.991,"z":2.541,"lo":1,"hi":1},
+{"rank":2,"dbn":"13K011","name":"P.S. 011 PURVIS J. BEHAN","borough":"Brooklyn","nEla":396,"nMath":394,"ela":0.957,"math":0.982,"z":2.461,"lo":2,"hi":5},
+{"rank":3,"dbn":"07X359","name":"LEADERS OF EXCELLENCE, ADVOCACY AND DISCOVERY","borough":"Bronx","nEla":120,"nMath":117,"ela":0.967,"math":1.0,"z":2.441,"lo":3,"hi":14},
+{"rank":4,"dbn":"09X004","name":"P.S./M.S. 004 CROTONA PARK WEST","borough":"Bronx","nEla":141,"nMath":143,"ela":0.979,"math":0.972,"z":2.425,"lo":3,"hi":12},
+{"rank":5,"dbn":"30Q580","name":"BACCALAUREATE SCHOOL FOR GLOBAL EDUCATION","borough":"Queens","nEla":130,"nMath":68,"ela":0.985,"math":0.985,"z":2.424,"lo":3,"hi":17},
+{"rank":6,"dbn":"03M859","name":"SPECIAL MUSIC SCHOOL","borough":"Manhattan","nEla":85,"nMath":74,"ela":0.976,"math":1.0,"z":2.407,"lo":7,"hi":18},
+{"rank":7,"dbn":"03M334","name":"THE ANDERSON SCHOOL","borough":"Manhattan","nEla":356,"nMath":294,"ela":0.949,"math":0.966,"z":2.391,"lo":2,"hi":9},
+{"rank":8,"dbn":"02M077","name":"P.S. 77 LOWER LAB SCHOOL","borough":"Manhattan","nEla":172,"nMath":174,"ela":0.953,"math":0.977,"z":2.388,"lo":3,"hi":14},
+{"rank":9,"dbn":"30Q300","name":"THE 30TH AVENUE SCHOOL (G&T CITYWIDE)","borough":"Queens","nEla":358,"nMath":304,"ela":0.936,"math":0.974,"z":2.373,"lo":3,"hi":11},
+{"rank":10,"dbn":"31R009","name":"NAPLES STREET ELEMENTARY SCHOOL","borough":"Staten Island","nEla":143,"nMath":144,"ela":0.958,"math":0.972,"z":2.371,"lo":4,"hi":16},
+{"rank":11,"dbn":"31R035","name":"P.S. 35 THE CLOVE VALLEY SCHOOL","borough":"Staten Island","nEla":183,"nMath":184,"ela":0.951,"math":0.962,"z":2.348,"lo":4,"hi":14},
+{"rank":12,"dbn":"04M012","name":"TAG YOUNG SCHOLARS","borough":"Manhattan","nEla":415,"nMath":359,"ela":0.942,"math":0.944,"z":2.323,"lo":4,"hi":14},
+{"rank":13,"dbn":"28Q196","name":"P.S. 196 GRAND CENTRAL PARKWAY","borough":"Queens","nEla":285,"nMath":294,"ela":0.916,"math":0.966,"z":2.291,"lo":5,"hi":15},
+{"rank":14,"dbn":"21K239","name":"MARK TWAIN I.S. 239 FOR THE GIFTED & TALENTED","borough":"Brooklyn","nEla":1229,"nMath":1158,"ela":0.907,"math":0.929,"z":2.211,"lo":9,"hi":16},
+{"rank":15,"dbn":"04M171","name":"P.S. 171 PATRICK HENRY","borough":"Manhattan","nEla":305,"nMath":302,"ela":0.875,"math":0.974,"z":2.2,"lo":10,"hi":21},
+{"rank":16,"dbn":"02M089","name":"P.S. 89","borough":"Manhattan","nEla":127,"nMath":128,"ela":0.906,"math":0.953,"z":2.169,"lo":12,"hi":33},
+{"rank":17,"dbn":"31R005","name":"P.S. 005 HUGUENOT","borough":"Staten Island","nEla":156,"nMath":161,"ela":0.91,"math":0.938,"z":2.165,"lo":13,"hi":25},
+{"rank":18,"dbn":"02M290","name":"P.S. 290 MANHATTAN NEW SCHOOL","borough":"Manhattan","nEla":156,"nMath":155,"ela":0.891,"math":0.955,"z":2.153,"lo":13,"hi":28},
+{"rank":19,"dbn":"27Q323","name":"SCHOLARS' ACADEMY","borough":"Queens","nEla":567,"nMath":385,"ela":0.914,"math":0.904,"z":2.147,"lo":13,"hi":21},
+{"rank":20,"dbn":"02M267","name":"EAST SIDE ELEMENTARY SCHOOL, PS 267","borough":"Manhattan","nEla":157,"nMath":162,"ela":0.873,"math":0.951,"z":2.095,"lo":15,"hi":38},
+{"rank":21,"dbn":"21K098","name":"I.S. 98 BAY ACADEMY","borough":"Brooklyn","nEla":1309,"nMath":1255,"ela":0.856,"math":0.929,"z":2.067,"lo":17,"hi":23},
+{"rank":22,"dbn":"03M166","name":"P.S. 166 THE RICHARD RODGERS SCHOOL OF THE ARTS AN","borough":"Manhattan","nEla":295,"nMath":298,"ela":0.864,"math":0.93,"z":2.057,"lo":15,"hi":31},
+{"rank":23,"dbn":"28Q303","name":"THE ACADEMY FOR EXCELLENCE THROUGH THE ARTS","borough":"Queens","nEla":206,"nMath":205,"ela":0.864,"math":0.932,"z":2.042,"lo":17,"hi":37},
+{"rank":24,"dbn":"15K172","name":"P.S. 172 BEACON SCHOOL OF EXCELLENCE","borough":"Brooklyn","nEla":99,"nMath":101,"ela":0.879,"math":0.941,"z":2.04,"lo":16,"hi":50},
+{"rank":25,"dbn":"20K686","name":"BROOKLYN SCHOOL OF INQUIRY","borough":"Brooklyn","nEla":354,"nMath":296,"ela":0.853,"math":0.916,"z":1.994,"lo":19,"hi":38},
+{"rank":26,"dbn":"15K107","name":"P.S. 107 JOHN W. KIMBALL","borough":"Brooklyn","nEla":231,"nMath":235,"ela":0.861,"math":0.911,"z":1.989,"lo":20,"hi":41},
+{"rank":27,"dbn":"26Q094","name":"P.S. 094 DAVID D. PORTER","borough":"Queens","nEla":171,"nMath":170,"ela":0.801,"math":0.982,"z":1.984,"lo":19,"hi":44},
+{"rank":28,"dbn":"31R008","name":"P.S. 8 SHIRLEE SOLOMON","borough":"Staten Island","nEla":253,"nMath":257,"ela":0.806,"math":0.953,"z":1.949,"lo":23,"hi":46},
+{"rank":29,"dbn":"02M177","name":"YORKVILLE EAST MIDDLE SCHOOL","borough":"Manhattan","nEla":249,"nMath":172,"ela":0.835,"math":0.924,"z":1.946,"lo":23,"hi":47},
+{"rank":30,"dbn":"26Q203","name":"P.S. 203 OAKLAND GARDENS","borough":"Queens","nEla":355,"nMath":364,"ela":0.817,"math":0.934,"z":1.943,"lo":22,"hi":42},
+{"rank":31,"dbn":"02M150","name":"P.S. 150","borough":"Manhattan","nEla":120,"nMath":121,"ela":0.825,"math":0.95,"z":1.941,"lo":20,"hi":60},
+{"rank":32,"dbn":"02M183","name":"P.S. 183 ROBERT L. STEVENSON","borough":"Manhattan","nEla":239,"nMath":244,"ela":0.82,"math":0.934,"z":1.937,"lo":21,"hi":45},
+{"rank":33,"dbn":"02M158","name":"P.S. 158 BAYARD TAYLOR","borough":"Manhattan","nEla":243,"nMath":249,"ela":0.86,"math":0.884,"z":1.92,"lo":24,"hi":48},
+{"rank":34,"dbn":"03M009","name":"P.S. 009 SARAH ANDERSON","borough":"Manhattan","nEla":232,"nMath":233,"ela":0.828,"math":0.918,"z":1.915,"lo":23,"hi":52},
+{"rank":35,"dbn":"26Q067","name":"J.H.S. 067 LOUIS PASTEUR","borough":"Queens","nEla":1014,"nMath":708,"ela":0.867,"math":0.86,"z":1.915,"lo":25,"hi":39},
+{"rank":36,"dbn":"02M006","name":"P.S. 006 LILLIE D. BLAKE","borough":"Manhattan","nEla":228,"nMath":230,"ela":0.82,"math":0.926,"z":1.913,"lo":25,"hi":48},
+{"rank":37,"dbn":"13K008","name":"THE EMILY WARREN ROEBLING SCHOOL","borough":"Brooklyn","nEla":243,"nMath":241,"ela":0.864,"math":0.876,"z":1.911,"lo":24,"hi":48},
+{"rank":38,"dbn":"15K321","name":"P.S. 321 WILLIAM PENN","borough":"Brooklyn","nEla":594,"nMath":597,"ela":0.832,"math":0.896,"z":1.901,"lo":23,"hi":42},
+{"rank":39,"dbn":"15K029","name":"P.S. 029 JOHN M. HARRIGAN","borough":"Brooklyn","nEla":306,"nMath":305,"ela":0.82,"math":0.911,"z":1.89,"lo":28,"hi":49},
+{"rank":40,"dbn":"15K443","name":"NEW VOICES SCHOOL OF ACADEMIC & CREATIVE ARTS","borough":"Brooklyn","nEla":438,"nMath":300,"ela":0.852,"math":0.863,"z":1.862,"lo":28,"hi":51},
+{"rank":41,"dbn":"01M184","name":"P.S. 184M SHUANG WEN","borough":"Manhattan","nEla":454,"nMath":379,"ela":0.775,"math":0.942,"z":1.851,"lo":30,"hi":51},
+{"rank":42,"dbn":"10X024","name":"P.S. 024 SPUYTEN DUYVIL","borough":"Bronx","nEla":270,"nMath":277,"ela":0.822,"math":0.892,"z":1.84,"lo":28,"hi":57},
+{"rank":43,"dbn":"02M255","name":"M.S. 255 SALK SCHOOL OF SCIENCE","borough":"Manhattan","nEla":358,"nMath":257,"ela":0.866,"math":0.84,"z":1.838,"lo":27,"hi":52},
+{"rank":44,"dbn":"02M442","name":"BALLET TECH, NYC PUBLIC SCHOOL FOR DANCE","borough":"Manhattan","nEla":119,"nMath":96,"ela":0.866,"math":0.865,"z":1.829,"lo":29,"hi":74},
+{"rank":45,"dbn":"16K040","name":"P.S. 040 GEORGE W. CARVER","borough":"Brooklyn","nEla":156,"nMath":165,"ela":0.84,"math":0.879,"z":1.827,"lo":28,"hi":66},
+{"rank":46,"dbn":"28Q101","name":"P.S. 101 SCHOOL IN THE GARDENS","borough":"Queens","nEla":257,"nMath":258,"ela":0.802,"math":0.907,"z":1.819,"lo":30,"hi":60},
+{"rank":47,"dbn":"26Q041","name":"P.S. 041 CROCHERON","borough":"Queens","nEla":189,"nMath":188,"ela":0.794,"math":0.915,"z":1.802,"lo":34,"hi":61},
+{"rank":48,"dbn":"03M054","name":"J.H.S. 054 BOOKER T. WASHINGTON","borough":"Manhattan","nEla":731,"nMath":517,"ela":0.837,"math":0.838,"z":1.768,"lo":38,"hi":56},
+{"rank":49,"dbn":"02M040","name":"P.S. 040 AUGUSTUS SAINT-GAUDENS","borough":"Manhattan","nEla":248,"nMath":252,"ela":0.823,"math":0.861,"z":1.76,"lo":38,"hi":66},
+{"rank":50,"dbn":"26Q098","name":"P.S. 098 THE DOUGLASTON SCHOOL","borough":"Queens","nEla":103,"nMath":108,"ela":0.777,"math":0.926,"z":1.739,"lo":39,"hi":88},
+{"rank":51,"dbn":"02M312","name":"NEW YORK CITY LAB MIDDLE SCHOOL FOR COLLABORATIVE","borough":"Manhattan","nEla":513,"nMath":345,"ela":0.83,"math":0.835,"z":1.734,"lo":40,"hi":67},
+{"rank":52,"dbn":"02M059","name":"P.S. 059 BEEKMAN HILL INTERNATIONAL","borough":"Manhattan","nEla":205,"nMath":213,"ela":0.79,"math":0.887,"z":1.729,"lo":40,"hi":77},
+{"rank":53,"dbn":"25Q079","name":"P.S. 079 FRANCIS LEWIS","borough":"Queens","nEla":401,"nMath":430,"ela":0.758,"math":0.912,"z":1.726,"lo":42,"hi":65},
+{"rank":54,"dbn":"14K031","name":"P.S. 031 SAMUEL F. DUPONT","borough":"Brooklyn","nEla":205,"nMath":210,"ela":0.79,"math":0.886,"z":1.724,"lo":41,"hi":83},
+{"rank":55,"dbn":"02M114","name":"EAST SIDE MIDDLE SCHOOL","borough":"Manhattan","nEla":426,"nMath":289,"ela":0.831,"math":0.83,"z":1.72,"lo":43,"hi":71},
+{"rank":56,"dbn":"02M260","name":"THE CLINTON SCHOOL","borough":"Manhattan","nEla":292,"nMath":191,"ela":0.849,"math":0.812,"z":1.709,"lo":43,"hi":83},
+{"rank":57,"dbn":"15K039","name":"P.S. 039 HENRY BRISTOW","borough":"Brooklyn","nEla":162,"nMath":164,"ela":0.778,"math":0.896,"z":1.703,"lo":39,"hi":78},
+{"rank":58,"dbn":"02M041","name":"P.S. 041 GREENWICH VILLAGE","borough":"Manhattan","nEla":190,"nMath":191,"ela":0.763,"math":0.906,"z":1.696,"lo":43,"hi":84},
+{"rank":59,"dbn":"26Q376","name":"P.S. 376","borough":"Queens","nEla":247,"nMath":256,"ela":0.761,"math":0.891,"z":1.665,"lo":45,"hi":85},
+{"rank":60,"dbn":"28Q121","name":"P.S. 121 QUEENS","borough":"Queens","nEla":234,"nMath":236,"ela":0.765,"math":0.886,"z":1.66,"lo":43,"hi":81},
+{"rank":61,"dbn":"02M234","name":"P.S. 234 INDEPENDENCE SCHOOL","borough":"Manhattan","nEla":203,"nMath":202,"ela":0.803,"math":0.847,"z":1.66,"lo":45,"hi":86},
+{"rank":62,"dbn":"26Q188","name":"P.S. 188 KINGSBURY","borough":"Queens","nEla":285,"nMath":286,"ela":0.768,"math":0.878,"z":1.657,"lo":46,"hi":86},
+{"rank":63,"dbn":"32K376","name":"P.S. 376","borough":"Brooklyn","nEla":139,"nMath":147,"ela":0.791,"math":0.864,"z":1.651,"lo":45,"hi":95},
+{"rank":64,"dbn":"11X096","name":"P.S. 096 RICHARD RODGERS","borough":"Bronx","nEla":290,"nMath":286,"ela":0.807,"math":0.832,"z":1.65,"lo":49,"hi":87},
+{"rank":65,"dbn":"21K101","name":"P.S. 101 THE VERRAZANO","borough":"Brooklyn","nEla":452,"nMath":451,"ela":0.754,"math":0.88,"z":1.638,"lo":49,"hi":77},
+{"rank":66,"dbn":"14K034","name":"P.S. 034 OLIVER H. PERRY","borough":"Brooklyn","nEla":164,"nMath":163,"ela":0.793,"math":0.853,"z":1.635,"lo":47,"hi":93},
+{"rank":67,"dbn":"03M245","name":"M.S. M245 THE COMPUTER SCHOOL","borough":"Manhattan","nEla":351,"nMath":232,"ela":0.809,"math":0.823,"z":1.634,"lo":49,"hi":80},
+{"rank":68,"dbn":"15K010","name":"MAGNET SCHOOL OF MATH, SCIENCE AND DESIGN TECHNOLO","borough":"Brooklyn","nEla":381,"nMath":386,"ela":0.798,"math":0.832,"z":1.632,"lo":50,"hi":85},
+{"rank":69,"dbn":"15K442","name":"M.S. 442 CARROLL GARDENS SCHOOL FOR INNOVATION","borough":"Brooklyn","nEla":308,"nMath":214,"ela":0.776,"math":0.85,"z":1.606,"lo":53,"hi":93},
+{"rank":70,"dbn":"17K590","name":"MEDGAR EVERS COLLEGE PREPARATORY SCHOOL","borough":"Brooklyn","nEla":211,"nMath":97,"ela":0.872,"math":0.753,"z":1.602,"lo":46,"hi":107},
+{"rank":71,"dbn":"16K005","name":"P.S. 005 DR. RONALD MCNAIR","borough":"Brooklyn","nEla":43,"nMath":42,"ela":0.721,"math":0.976,"z":1.586,"lo":57,"hi":166},
+{"rank":72,"dbn":"02M397","name":"SPRUCE STREET SCHOOL","borough":"Manhattan","nEla":255,"nMath":212,"ela":0.773,"math":0.844,"z":1.577,"lo":54,"hi":106},
+{"rank":73,"dbn":"19K149","name":"P.S. 149 DANNY KAYE","borough":"Brooklyn","nEla":248,"nMath":253,"ela":0.77,"math":0.846,"z":1.577,"lo":55,"hi":100},
+{"rank":74,"dbn":"26Q205","name":"P.S. 205 ALEXANDER GRAHAM BELL","borough":"Queens","nEla":90,"nMath":89,"ela":0.789,"math":0.843,"z":1.553,"lo":52,"hi":136},
+{"rank":75,"dbn":"03M087","name":"P.S. 087 WILLIAM SHERMAN","borough":"Manhattan","nEla":347,"nMath":347,"ela":0.778,"math":0.821,"z":1.548,"lo":58,"hi":100},
+{"rank":76,"dbn":"16K628","name":"BROOKLYN BROWNSTONE SCHOOL","borough":"Brooklyn","nEla":102,"nMath":103,"ela":0.824,"math":0.796,"z":1.544,"lo":59,"hi":135},
+{"rank":77,"dbn":"22K134","name":"P.S. K134","borough":"Brooklyn","nEla":224,"nMath":224,"ela":0.732,"math":0.875,"z":1.541,"lo":60,"hi":106},
+{"rank":78,"dbn":"23K644","name":"EAGLE ACADEMY FOR YOUNG MEN II","borough":"Brooklyn","nEla":207,"nMath":149,"ela":0.7,"math":0.913,"z":1.535,"lo":59,"hi":114},
+{"rank":79,"dbn":"03M199","name":"P.S. 199 JESSE ISIDOR STRAUS","borough":"Manhattan","nEla":255,"nMath":254,"ela":0.765,"math":0.835,"z":1.534,"lo":59,"hi":108},
+{"rank":80,"dbn":"26Q074","name":"J.H.S. 074 NATHANIEL HAWTHORNE","borough":"Queens","nEla":1018,"nMath":845,"ela":0.766,"math":0.821,"z":1.531,"lo":64,"hi":91},
+{"rank":81,"dbn":"20K163","name":"P.S. 163 BATH BEACH","borough":"Brooklyn","nEla":302,"nMath":291,"ela":0.742,"math":0.856,"z":1.529,"lo":57,"hi":109},
+{"rank":82,"dbn":"02M124","name":"P.S. 124 YUNG WING","borough":"Manhattan","nEla":209,"nMath":212,"ela":0.742,"math":0.858,"z":1.523,"lo":60,"hi":119},
+{"rank":83,"dbn":"15K154","name":"THE WINDSOR TERRACE SCHOOL","borough":"Brooklyn","nEla":205,"nMath":206,"ela":0.756,"math":0.84,"z":1.515,"lo":61,"hi":121},
+{"rank":84,"dbn":"02M289","name":"I.S. 289","borough":"Manhattan","nEla":222,"nMath":201,"ela":0.752,"math":0.841,"z":1.508,"lo":63,"hi":121},
+{"rank":85,"dbn":"28Q174","name":"P.S. 174 WILLIAM SIDNEY MOUNT","borough":"Queens","nEla":246,"nMath":243,"ela":0.732,"math":0.86,"z":1.505,"lo":58,"hi":109},
+{"rank":86,"dbn":"02M408","name":"PROFESSIONAL PERFORMING ARTS HIGH SCHOOL","borough":"Manhattan","nEla":86,"nMath":58,"ela":0.791,"math":0.828,"z":1.498,"lo":53,"hi":163},
+{"rank":87,"dbn":"28Q144","name":"P.S. 144 COL JEROMUS REMSEN","borough":"Queens","nEla":328,"nMath":329,"ela":0.738,"math":0.839,"z":1.478,"lo":65,"hi":116},
+{"rank":88,"dbn":"02M281","name":"THE RIVER SCHOOL","borough":"Manhattan","nEla":168,"nMath":180,"ela":0.738,"math":0.844,"z":1.469,"lo":67,"hi":135},
+{"rank":89,"dbn":"25Q499","name":"THE QUEENS COLLEGE SCHOOL FOR MATH, SCIENCE AND TE","borough":"Queens","nEla":318,"nMath":263,"ela":0.767,"math":0.802,"z":1.464,"lo":69,"hi":116},
+{"rank":90,"dbn":"05M125","name":"P.S. 125 RALPH BUNCHE","borough":"Manhattan","nEla":66,"nMath":66,"ela":0.818,"math":0.788,"z":1.463,"lo":63,"hi":177},
+{"rank":91,"dbn":"19K108","name":"P.S. 108 SAL ABBRACCIAMENTO","borough":"Brooklyn","nEla":269,"nMath":272,"ela":0.751,"math":0.82,"z":1.461,"lo":70,"hi":125},
+{"rank":92,"dbn":"05M362","name":"COLUMBIA SECONDARY SCHOOL","borough":"Manhattan","nEla":292,"nMath":204,"ela":0.818,"math":0.745,"z":1.458,"lo":68,"hi":128},
+{"rank":93,"dbn":"03M243","name":"M.S. 243 CENTER SCHOOL","borough":"Manhattan","nEla":240,"nMath":185,"ela":0.767,"math":0.8,"z":1.446,"lo":70,"hi":135},
+{"rank":94,"dbn":"02M340","name":"SIXTH AVENUE ELEMENTARY SCHOOL","borough":"Manhattan","nEla":100,"nMath":103,"ela":0.76,"math":0.825,"z":1.446,"lo":70,"hi":166},
+{"rank":95,"dbn":"31R007","name":"I.S. 007 ELIAS BERNSTEIN","borough":"Staten Island","nEla":1081,"nMath":1078,"ela":0.756,"math":0.797,"z":1.44,"lo":76,"hi":102},
+{"rank":96,"dbn":"20K201","name":"THE MADELEINE BRENNAN SCHOOL","borough":"Brooklyn","nEla":1334,"nMath":1328,"ela":0.723,"math":0.831,"z":1.437,"lo":79,"hi":105},
+{"rank":97,"dbn":"30Q078","name":"P.S./I.S. 78Q","borough":"Queens","nEla":491,"nMath":420,"ela":0.733,"math":0.824,"z":1.435,"lo":75,"hi":122},
+{"rank":98,"dbn":"31R050","name":"P.S. 050 FRANK HANKINSON","borough":"Staten Island","nEla":340,"nMath":339,"ela":0.7,"math":0.861,"z":1.431,"lo":73,"hi":125},
+{"rank":99,"dbn":"11X108","name":"P.S. 108 PHILIP J. ABINANTI","borough":"Bronx","nEla":360,"nMath":370,"ela":0.7,"math":0.859,"z":1.427,"lo":75,"hi":122},
+{"rank":100,"dbn":"28Q040","name":"P.S. 040 SAMUEL HUNTINGTON","borough":"Queens","nEla":111,"nMath":118,"ela":0.703,"math":0.873,"z":1.419,"lo":71,"hi":164},
+{"rank":101,"dbn":"23K165","name":"P.S. 165 IDA POSNER","borough":"Brooklyn","nEla":41,"nMath":43,"ela":0.78,"math":0.837,"z":1.414,"lo":70,"hi":222},
+{"rank":102,"dbn":"20K185","name":"P.S. 185 WALTER KASSENBROCK","borough":"Brooklyn","nEla":277,"nMath":276,"ela":0.736,"math":0.812,"z":1.4,"lo":80,"hi":138},
+{"rank":103,"dbn":"25Q130","name":"P.S. 130","borough":"Queens","nEla":175,"nMath":181,"ela":0.691,"math":0.862,"z":1.386,"lo":72,"hi":148},
+{"rank":104,"dbn":"16K035","name":"M.S. 035 STEPHEN DECATUR","borough":"Brooklyn","nEla":181,"nMath":177,"ela":0.812,"math":0.729,"z":1.385,"lo":75,"hi":151},
+{"rank":105,"dbn":"25Q281","name":"EAST-WEST SCHOOL OF INTERNATIONAL STUDIES","borough":"Queens","nEla":316,"nMath":218,"ela":0.718,"math":0.826,"z":1.384,"lo":79,"hi":134},
+{"rank":106,"dbn":"14K050","name":"J.H.S. 050 JOHN D. WELLS","borough":"Brooklyn","nEla":316,"nMath":207,"ela":0.737,"math":0.802,"z":1.376,"lo":82,"hi":149},
+{"rank":107,"dbn":"02M276","name":"BATTERY PARK CITY SCHOOL","borough":"Manhattan","nEla":440,"nMath":371,"ela":0.732,"math":0.803,"z":1.376,"lo":84,"hi":128},
+{"rank":108,"dbn":"31R075","name":"I.S. 075 FRANK D. PAULO","borough":"Staten Island","nEla":1373,"nMath":1186,"ela":0.722,"math":0.807,"z":1.371,"lo":90,"hi":121},
+{"rank":109,"dbn":"17K241","name":"P.S. 241 EMMA L. JOHNSTON","borough":"Brooklyn","nEla":122,"nMath":123,"ela":0.738,"math":0.813,"z":1.37,"lo":78,"hi":168},
+{"rank":110,"dbn":"16K021","name":"P.S. 021 CRISPUS ATTUCKS","borough":"Brooklyn","nEla":165,"nMath":167,"ela":0.721,"math":0.82,"z":1.361,"lo":73,"hi":163},
+{"rank":111,"dbn":"20K127","name":"P.S. 127 MCKINLEY PARK","borough":"Brooklyn","nEla":303,"nMath":301,"ela":0.71,"math":0.824,"z":1.359,"lo":88,"hi":142},
+{"rank":112,"dbn":"20K259","name":"J.H.S. 259 WILLIAM MCKINLEY","borough":"Brooklyn","nEla":1684,"nMath":1722,"ela":0.694,"math":0.83,"z":1.353,"lo":94,"hi":120},
+{"rank":113,"dbn":"18K276","name":"P.S. 276 LOUIS MARSHALL","borough":"Brooklyn","nEla":118,"nMath":124,"ela":0.61,"math":0.944,"z":1.348,"lo":85,"hi":174},
+{"rank":114,"dbn":"02M527","name":"P.S. 527 - EAST SIDE SCHOOL FOR SOCIAL ACTION","borough":"Manhattan","nEla":160,"nMath":167,"ela":0.694,"math":0.844,"z":1.345,"lo":78,"hi":159},
+{"rank":115,"dbn":"02M011","name":"P.S. 011: THE SARAH J. GARNET ELEMENTARY SCHOOL","borough":"Manhattan","nEla":306,"nMath":306,"ela":0.722,"math":0.804,"z":1.344,"lo":86,"hi":146},
+{"rank":116,"dbn":"24Q007","name":"P.S. 007 LOUIS F. SIMEONE","borough":"Queens","nEla":441,"nMath":472,"ela":0.698,"math":0.826,"z":1.343,"lo":93,"hi":143},
+{"rank":117,"dbn":"31R023","name":"P.S. 023 RICHMONDTOWN","borough":"Staten Island","nEla":314,"nMath":310,"ela":0.694,"math":0.832,"z":1.339,"lo":82,"hi":151},
+{"rank":118,"dbn":"31R062","name":"THE KATHLEEN GRIMM SCHOOL FOR LEADERSHIP AND SUSTA","borough":"Staten Island","nEla":208,"nMath":209,"ela":0.712,"math":0.818,"z":1.338,"lo":84,"hi":155},
+{"rank":119,"dbn":"31R056","name":"P.S. 56 THE LOUIS DESARIO SCHOOL","borough":"Staten Island","nEla":239,"nMath":243,"ela":0.724,"math":0.802,"z":1.338,"lo":82,"hi":141},
+{"rank":120,"dbn":"28Q680","name":"QUEENS GATEWAY TO HEALTH SCIENCES SECONDARY SCHOOL","borough":"Queens","nEla":275,"nMath":189,"ela":0.84,"math":0.672,"z":1.333,"lo":82,"hi":151},
+{"rank":121,"dbn":"26Q158","name":"M.S. 158 MARIE CURIE","borough":"Queens","nEla":771,"nMath":617,"ela":0.704,"math":0.809,"z":1.321,"lo":94,"hi":138},
+{"rank":122,"dbn":"02M198","name":"P.S. 198 ISIDOR E. IDA STRAUS","borough":"Manhattan","nEla":188,"nMath":195,"ela":0.713,"math":0.81,"z":1.319,"lo":94,"hi":155},
+{"rank":123,"dbn":"26Q216","name":"J.H.S. 216 GEORGE J. RYAN","borough":"Queens","nEla":1443,"nMath":1255,"ela":0.73,"math":0.776,"z":1.315,"lo":101,"hi":131},
+{"rank":124,"dbn":"02M167","name":"J.H.S. 167 ROBERT F. WAGNER","borough":"Manhattan","nEla":890,"nMath":752,"ela":0.748,"math":0.757,"z":1.314,"lo":95,"hi":139},
+{"rank":125,"dbn":"10X081","name":"P.S. 081 ROBERT J. CHRISTEN","borough":"Bronx","nEla":270,"nMath":272,"ela":0.696,"math":0.82,"z":1.309,"lo":93,"hi":163},
+{"rank":126,"dbn":"15K418","name":"THE CHILDREN'S SCHOOL","borough":"Brooklyn","nEla":76,"nMath":76,"ela":0.75,"math":0.789,"z":1.307,"lo":90,"hi":208},
+{"rank":127,"dbn":"30Q122","name":"P.S. 122 MAMIE FAY","borough":"Queens","nEla":651,"nMath":563,"ela":0.751,"math":0.751,"z":1.305,"lo":96,"hi":145},
+{"rank":128,"dbn":"17K249","name":"P.S. 249 THE CATON","borough":"Brooklyn","nEla":298,"nMath":300,"ela":0.648,"math":0.867,"z":1.295,"lo":96,"hi":151},
+{"rank":129,"dbn":"26Q115","name":"THE JAMES J. AMBROSE SCHOOL","borough":"Queens","nEla":299,"nMath":302,"ela":0.716,"math":0.791,"z":1.294,"lo":95,"hi":171},
+{"rank":130,"dbn":"02M151","name":"YORKVILLE COMMUNITY SCHOOL","borough":"Manhattan","nEla":129,"nMath":129,"ela":0.69,"math":0.829,"z":1.285,"lo":89,"hi":184},
+{"rank":131,"dbn":"24Q560","name":"ROBERT F. WAGNER, JR. SECONDARY SCHOOL FOR ARTS AN","borough":"Queens","nEla":156,"nMath":97,"ela":0.731,"math":0.784,"z":1.28,"lo":98,"hi":209},
+{"rank":132,"dbn":"15K118","name":"THE MAURICE SENDAK COMMUNITY SCHOOL","borough":"Brooklyn","nEla":72,"nMath":73,"ela":0.722,"math":0.808,"z":1.276,"lo":93,"hi":203},
+{"rank":133,"dbn":"22K222","name":"P.S. 222 KATHERINE R. SNYDER","borough":"Brooklyn","nEla":300,"nMath":312,"ela":0.67,"math":0.83,"z":1.265,"lo":96,"hi":158},
+{"rank":134,"dbn":"17K543","name":"SCIENCE, TECHNOLOGY AND RESEARCH EARLY COLLEGE HIG","borough":"Brooklyn","nEla":156,"nMath":155,"ela":0.718,"math":0.781,"z":1.25,"lo":93,"hi":194},
+{"rank":135,"dbn":"15K058","name":"P.S. 058 THE CARROLL","borough":"Brooklyn","nEla":320,"nMath":323,"ela":0.694,"math":0.796,"z":1.245,"lo":98,"hi":164},
+{"rank":136,"dbn":"26Q221","name":"P.S. 221 THE NORTH HILLS SCHOOL","borough":"Queens","nEla":224,"nMath":231,"ela":0.71,"math":0.779,"z":1.239,"lo":105,"hi":177},
+{"rank":137,"dbn":"29Q360","name":"P.S. 360","borough":"Queens","nEla":102,"nMath":99,"ela":0.667,"math":0.838,"z":1.229,"lo":95,"hi":218},
+{"rank":138,"dbn":"03M291","name":"WEST END SECONDARY SCHOOL","borough":"Manhattan","nEla":300,"nMath":193,"ela":0.73,"math":0.751,"z":1.227,"lo":103,"hi":177},
+{"rank":139,"dbn":"25Q209","name":"P.S. 209 CLEARVIEW GARDENS","borough":"Queens","nEla":210,"nMath":211,"ela":0.638,"math":0.853,"z":1.224,"lo":106,"hi":200},
+{"rank":140,"dbn":"21K090","name":"P.S. 90 EDNA COHEN SCHOOL","borough":"Brooklyn","nEla":159,"nMath":156,"ela":0.648,"math":0.846,"z":1.222,"lo":104,"hi":185},
+{"rank":141,"dbn":"16K335","name":"P.S. 335 GRANVILLE T. WOODS","borough":"Brooklyn","nEla":57,"nMath":59,"ela":0.719,"math":0.797,"z":1.217,"lo":105,"hi":212},
+{"rank":142,"dbn":"19K328","name":"P.S. 328 PHYLLIS WHEATLEY","borough":"Brooklyn","nEla":82,"nMath":82,"ela":0.695,"math":0.805,"z":1.208,"lo":104,"hi":242},
+{"rank":143,"dbn":"31R034","name":"I.S. 034 TOTTENVILLE","borough":"Staten Island","nEla":1112,"nMath":1107,"ela":0.677,"math":0.793,"z":1.208,"lo":119,"hi":154},
+{"rank":144,"dbn":"02M126","name":"P.S. 126 JACOB AUGUST RIIS","borough":"Manhattan","nEla":447,"nMath":338,"ela":0.68,"math":0.793,"z":1.204,"lo":114,"hi":170},
+{"rank":145,"dbn":"31R003","name":"P.S. 003 THE MARGARET GIOIOSA SCHOOL","borough":"Staten Island","nEla":300,"nMath":303,"ela":0.647,"math":0.832,"z":1.204,"lo":109,"hi":186},
+{"rank":146,"dbn":"18K208","name":"P.S. 208 ELSA EBELING","borough":"Brooklyn","nEla":108,"nMath":113,"ela":0.676,"math":0.814,"z":1.201,"lo":108,"hi":219},
+{"rank":147,"dbn":"02M104","name":"J.H.S. 104 SIMON BARUCH","borough":"Manhattan","nEla":895,"nMath":723,"ela":0.788,"math":0.668,"z":1.198,"lo":124,"hi":162},
+{"rank":148,"dbn":"25Q169","name":"P.S. 169 BAY TERRACE","borough":"Queens","nEla":205,"nMath":207,"ela":0.61,"math":0.87,"z":1.187,"lo":111,"hi":196},
+{"rank":149,"dbn":"26Q133","name":"P.S. 133 THE BELLEROSE SCHOOL OF EXCELLENCE","borough":"Queens","nEla":259,"nMath":267,"ela":0.672,"math":0.798,"z":1.185,"lo":114,"hi":187},
+{"rank":150,"dbn":"02M003","name":"P.S. 003 CHARRETTE SCHOOL","borough":"Manhattan","nEla":195,"nMath":200,"ela":0.697,"math":0.77,"z":1.177,"lo":105,"hi":208},
+{"rank":151,"dbn":"22K195","name":"P.S. 195 MANHATTAN BEACH","borough":"Brooklyn","nEla":183,"nMath":184,"ela":0.667,"math":0.804,"z":1.176,"lo":102,"hi":215},
+{"rank":152,"dbn":"32K554","name":"ALL CITY LEADERSHIP SECONDARY SCHOOL","borough":"Brooklyn","nEla":185,"nMath":124,"ela":0.805,"math":0.653,"z":1.176,"lo":103,"hi":218},
+{"rank":153,"dbn":"20K310","name":"THE SCHOOL FOR FUTURE LEADERS","borough":"Brooklyn","nEla":272,"nMath":282,"ela":0.629,"math":0.837,"z":1.165,"lo":126,"hi":194},
+{"rank":154,"dbn":"14K318","name":"I.S. 318 EUGENIO MARIA DE HOSTOS","borough":"Brooklyn","nEla":872,"nMath":690,"ela":0.756,"math":0.688,"z":1.16,"lo":126,"hi":180},
+{"rank":155,"dbn":"26Q191","name":"P.S. 191 MAYFLOWER","borough":"Queens","nEla":106,"nMath":106,"ela":0.698,"math":0.774,"z":1.159,"lo":106,"hi":226},
+{"rank":156,"dbn":"29Q176","name":"P.S. 176 CAMBRIA HEIGHTS","borough":"Queens","nEla":203,"nMath":199,"ela":0.645,"math":0.819,"z":1.157,"lo":110,"hi":212},
+{"rank":157,"dbn":"27Q066","name":"P.S. 066 JACQUELINE KENNEDY ONASSIS","borough":"Queens","nEla":231,"nMath":242,"ela":0.654,"math":0.802,"z":1.141,"lo":119,"hi":218},
+{"rank":158,"dbn":"30Q234","name":"P.S. 234","borough":"Queens","nEla":146,"nMath":145,"ela":0.685,"math":0.772,"z":1.137,"lo":117,"hi":223},
+{"rank":159,"dbn":"30Q227","name":"I.S. 227 LOUIS ARMSTRONG","borough":"Queens","nEla":1470,"nMath":1119,"ela":0.72,"math":0.716,"z":1.131,"lo":138,"hi":174},
+{"rank":160,"dbn":"20K105","name":"P.S. 105 THE BLYTHEBOURNE","borough":"Brooklyn","nEla":576,"nMath":599,"ela":0.578,"math":0.873,"z":1.128,"lo":135,"hi":191},
+{"rank":161,"dbn":"26Q159","name":"P.S. 159","borough":"Queens","nEla":245,"nMath":260,"ela":0.62,"math":0.831,"z":1.125,"lo":123,"hi":215},
+{"rank":162,"dbn":"30Q361","name":"THE WOODSIDE COMMUNITY SCHOOL","borough":"Queens","nEla":205,"nMath":207,"ela":0.683,"math":0.763,"z":1.122,"lo":114,"hi":220},
+{"rank":163,"dbn":"15K447","name":"THE EXPLORATORY SCHOOL","borough":"Brooklyn","nEla":417,"nMath":287,"ela":0.731,"math":0.704,"z":1.12,"lo":133,"hi":210},
+{"rank":164,"dbn":"27Q316","name":"QUEENS EXPLORERS ELEMENTARY SCHOOL","borough":"Queens","nEla":129,"nMath":127,"ela":0.667,"math":0.787,"z":1.119,"lo":131,"hi":255},
+{"rank":165,"dbn":"25Q193","name":"P.S. 193 ALFRED J. KENNEDY","borough":"Queens","nEla":260,"nMath":262,"ela":0.65,"math":0.794,"z":1.114,"lo":128,"hi":196},
+{"rank":166,"dbn":"19K065","name":"P.S. 065","borough":"Brooklyn","nEla":221,"nMath":225,"ela":0.633,"math":0.813,"z":1.113,"lo":118,"hi":214},
+{"rank":167,"dbn":"28Q157","name":"J.H.S. 157 STEPHEN A. HALSEY","borough":"Queens","nEla":1460,"nMath":1143,"ela":0.69,"math":0.741,"z":1.113,"lo":143,"hi":183},
+{"rank":168,"dbn":"10X228","name":"JONAS BRONCK ACADEMY","borough":"Bronx","nEla":269,"nMath":269,"ela":0.691,"math":0.743,"z":1.103,"lo":132,"hi":214},
+{"rank":169,"dbn":"18K244","name":"P.S. 244 RICHARD R. GREEN","borough":"Brooklyn","nEla":125,"nMath":124,"ela":0.656,"math":0.79,"z":1.096,"lo":114,"hi":249},
+{"rank":170,"dbn":"22K236","name":"P.S. 236 MILL BASIN","borough":"Brooklyn","nEla":255,"nMath":257,"ela":0.659,"math":0.774,"z":1.089,"lo":128,"hi":224},
+{"rank":171,"dbn":"20K170","name":"RALPH A. FABRIZIO SCHOOL","borough":"Brooklyn","nEla":418,"nMath":436,"ela":0.61,"math":0.823,"z":1.087,"lo":145,"hi":212},
+{"rank":172,"dbn":"29Q132","name":"P.S. 132 RALPH BUNCHE","borough":"Queens","nEla":114,"nMath":114,"ela":0.614,"math":0.833,"z":1.084,"lo":115,"hi":243},
+{"rank":173,"dbn":"15K051","name":"M.S. 51 WILLIAM ALEXANDER","borough":"Brooklyn","nEla":979,"nMath":706,"ela":0.713,"math":0.705,"z":1.083,"lo":146,"hi":194},
+{"rank":174,"dbn":"21K253","name":"P.S. 253","borough":"Brooklyn","nEla":417,"nMath":417,"ela":0.612,"math":0.818,"z":1.076,"lo":149,"hi":210},
+{"rank":175,"dbn":"12X067","name":"P.S. 067 MOHEGAN SCHOOL","borough":"Bronx","nEla":82,"nMath":82,"ela":0.622,"math":0.829,"z":1.076,"lo":126,"hi":262},
+{"rank":176,"dbn":"17K289","name":"P.S. 289 GEORGE V. BROWER","borough":"Brooklyn","nEla":71,"nMath":70,"ela":0.704,"math":0.743,"z":1.072,"lo":123,"hi":298},
+{"rank":177,"dbn":"10X007","name":"MILTON FEIN SCHOOL","borough":"Bronx","nEla":163,"nMath":171,"ela":0.675,"math":0.754,"z":1.07,"lo":129,"hi":224},
+{"rank":178,"dbn":"13K020","name":"P.S. 020 CLINTON HILL","borough":"Brooklyn","nEla":245,"nMath":245,"ela":0.71,"math":0.71,"z":1.068,"lo":135,"hi":226},
+{"rank":179,"dbn":"28Q099","name":"P.S. 099 KEW GARDENS","borough":"Queens","nEla":266,"nMath":278,"ela":0.635,"math":0.791,"z":1.068,"lo":141,"hi":222},
+{"rank":180,"dbn":"31R024","name":"I.S. 024 MYRA S. BARNES","borough":"Staten Island","nEla":1203,"nMath":1053,"ela":0.687,"math":0.726,"z":1.064,"lo":156,"hi":204},
+{"rank":181,"dbn":"31R029","name":"P.S. 029 BARDWELL","borough":"Staten Island","nEla":232,"nMath":234,"ela":0.655,"math":0.769,"z":1.064,"lo":138,"hi":222},
+{"rank":182,"dbn":"20K247","name":"P.S. 247 BROOKLYN","borough":"Brooklyn","nEla":363,"nMath":372,"ela":0.634,"math":0.788,"z":1.06,"lo":140,"hi":221},
+{"rank":183,"dbn":"30Q084","name":"P.S. 084 STEINWAY","borough":"Queens","nEla":135,"nMath":134,"ela":0.674,"math":0.754,"z":1.058,"lo":129,"hi":254},
+{"rank":184,"dbn":"31R032","name":"P.S. 032 THE GIFFORD SCHOOL","borough":"Staten Island","nEla":308,"nMath":316,"ela":0.662,"math":0.753,"z":1.049,"lo":147,"hi":217},
+{"rank":185,"dbn":"25Q024","name":"P.S. 024 ANDREW JACKSON","borough":"Queens","nEla":561,"nMath":585,"ela":0.563,"math":0.858,"z":1.048,"lo":158,"hi":209},
+{"rank":186,"dbn":"06M187","name":"P.S./I.S. 187 HUDSON CLIFFS","borough":"Manhattan","nEla":440,"nMath":415,"ela":0.707,"math":0.699,"z":1.041,"lo":150,"hi":228},
+{"rank":187,"dbn":"20K229","name":"P.S. 229 DYKER","borough":"Brooklyn","nEla":644,"nMath":626,"ela":0.669,"math":0.738,"z":1.04,"lo":153,"hi":209},
+{"rank":188,"dbn":"14K380","name":"P.S. 380 JOHN WAYNE ELEMENTARY","borough":"Brooklyn","nEla":124,"nMath":123,"ela":0.605,"math":0.821,"z":1.034,"lo":140,"hi":254},
+{"rank":189,"dbn":"30Q166","name":"P.S. 166 HENRY GRADSTEIN","borough":"Queens","nEla":283,"nMath":282,"ela":0.664,"math":0.745,"z":1.031,"lo":147,"hi":249},
+{"rank":190,"dbn":"03M084","name":"P.S. 084 LILLIAN WEBER","borough":"Manhattan","nEla":243,"nMath":245,"ela":0.663,"math":0.747,"z":1.029,"lo":144,"hi":227},
+{"rank":191,"dbn":"14K110","name":"P.S. 110 THE MONITOR","borough":"Brooklyn","nEla":169,"nMath":169,"ela":0.669,"math":0.74,"z":1.017,"lo":139,"hi":271},
+{"rank":192,"dbn":"15K038","name":"P.S. 038 THE PACIFIC","borough":"Brooklyn","nEla":199,"nMath":200,"ela":0.678,"math":0.725,"z":1.012,"lo":135,"hi":265},
+{"rank":193,"dbn":"31R052","name":"P.S. 052 JOHN C. THOMPSON","borough":"Staten Island","nEla":272,"nMath":274,"ela":0.618,"math":0.788,"z":1.011,"lo":150,"hi":243},
+{"rank":194,"dbn":"20K102","name":"P.S. 102 THE BAYVIEW","borough":"Brooklyn","nEla":434,"nMath":431,"ela":0.65,"math":0.749,"z":1.01,"lo":160,"hi":237},
+{"rank":195,"dbn":"22K890","name":"M.S. 890","borough":"Brooklyn","nEla":321,"nMath":320,"ela":0.667,"math":0.728,"z":0.999,"lo":160,"hi":240},
+{"rank":196,"dbn":"30Q286","name":"YOUNG WOMEN'S LEADERSHIP SCHOOL, ASTORIA","borough":"Queens","nEla":226,"nMath":171,"ela":0.726,"math":0.667,"z":0.998,"lo":140,"hi":264},
+{"rank":197,"dbn":"25Q242","name":"P.S. 242 LEONARD P. STAVISKY EARLY CHILDHOOD SCHOO","borough":"Queens","nEla":46,"nMath":47,"ela":0.609,"math":0.83,"z":0.995,"lo":143,"hi":343},
+{"rank":198,"dbn":"25Q184","name":"P.S. 184 FLUSHING MANOR","borough":"Queens","nEla":212,"nMath":215,"ela":0.59,"math":0.814,"z":0.993,"lo":145,"hi":247},
+{"rank":199,"dbn":"30Q150","name":"P.S. 150 QUEENS","borough":"Queens","nEla":260,"nMath":261,"ela":0.665,"math":0.728,"z":0.99,"lo":155,"hi":262},
+{"rank":200,"dbn":"12X066","name":"P.S. 066 SCHOOL OF HIGHER EXPECTATIONS","borough":"Bronx","nEla":163,"nMath":169,"ela":0.613,"math":0.787,"z":0.984,"lo":146,"hi":261},
+{"rank":201,"dbn":"25Q163","name":"P.S. 163 FLUSHING HEIGHTS","borough":"Queens","nEla":345,"nMath":365,"ela":0.568,"math":0.825,"z":0.97,"lo":158,"hi":251},
+{"rank":202,"dbn":"25Q185","name":"J.H.S. 185 EDWARD BLEEKER","borough":"Queens","nEla":1416,"nMath":1128,"ela":0.642,"math":0.738,"z":0.969,"lo":177,"hi":218},
+{"rank":203,"dbn":"26Q186","name":"P.S. 186 CASTLEWOOD","borough":"Queens","nEla":115,"nMath":118,"ela":0.635,"math":0.763,"z":0.968,"lo":141,"hi":286},
+{"rank":204,"dbn":"20K264","name":"P.S. 264 BAY RIDGE ELEMENTARY SCHOOL FOR THE ARTS","borough":"Brooklyn","nEla":175,"nMath":184,"ela":0.674,"math":0.712,"z":0.965,"lo":157,"hi":283},
+{"rank":205,"dbn":"20K164","name":"P.S. 164 CAESAR RODNEY","borough":"Brooklyn","nEla":189,"nMath":187,"ela":0.624,"math":0.765,"z":0.962,"lo":154,"hi":289},
+{"rank":206,"dbn":"20K176","name":"P.S. 176 OVINGTON","borough":"Brooklyn","nEla":547,"nMath":570,"ela":0.589,"math":0.795,"z":0.957,"lo":178,"hi":246},
+{"rank":207,"dbn":"25Q032","name":"P.S. 032 STATE STREET","borough":"Queens","nEla":395,"nMath":403,"ela":0.63,"math":0.749,"z":0.954,"lo":176,"hi":249},
+{"rank":208,"dbn":"19K325","name":"THE FRESH CREEK SCHOOL","borough":"Brooklyn","nEla":89,"nMath":91,"ela":0.719,"math":0.67,"z":0.953,"lo":135,"hi":320},
+{"rank":209,"dbn":"28Q161","name":"P.S. 161 ARTHUR ASHE SCHOOL","borough":"Queens","nEla":166,"nMath":178,"ela":0.627,"math":0.758,"z":0.949,"lo":162,"hi":277},
+{"rank":210,"dbn":"17K484","name":"RONALD EDMONDS LEARNING CENTER II","borough":"Brooklyn","nEla":71,"nMath":60,"ela":0.634,"math":0.767,"z":0.941,"lo":151,"hi":315},
+{"rank":211,"dbn":"16K262","name":"P.S. 262 EL HAJJ MALIK EL SHABAZZ ELEMENTARY SCHOO","borough":"Brooklyn","nEla":49,"nMath":45,"ela":0.673,"math":0.733,"z":0.936,"lo":136,"hi":354},
+{"rank":212,"dbn":"11X153","name":"P.S. 153 HELEN KELLER","borough":"Bronx","nEla":178,"nMath":180,"ela":0.674,"math":0.7,"z":0.935,"lo":154,"hi":264},
+{"rank":213,"dbn":"13K133","name":"P.S. 133 WILLIAM A. BUTLER","borough":"Brooklyn","nEla":226,"nMath":222,"ela":0.628,"math":0.748,"z":0.934,"lo":159,"hi":275},
+{"rank":214,"dbn":"11X481","name":"THE STEAM BRIDGE SCHOOL","borough":"Bronx","nEla":93,"nMath":92,"ela":0.677,"math":0.707,"z":0.933,"lo":162,"hi":305},
+{"rank":215,"dbn":"31R053","name":"THE BARBARA ESSELBORN SCHOOL","borough":"Staten Island","nEla":363,"nMath":364,"ela":0.647,"math":0.72,"z":0.926,"lo":178,"hi":272},
+{"rank":216,"dbn":"30Q398","name":"THE HECTOR FIGUEROA SCHOOL","borough":"Queens","nEla":193,"nMath":195,"ela":0.611,"math":0.764,"z":0.925,"lo":158,"hi":295},
+{"rank":217,"dbn":"02M896","name":"LOWER MANHATTAN COMMUNITY MIDDLE SCHOOL","borough":"Manhattan","nEla":274,"nMath":208,"ela":0.726,"math":0.635,"z":0.924,"lo":176,"hi":276},
+{"rank":218,"dbn":"25Q244","name":"THE ACTIVE LEARNING ELEMENTARY SCHOOL","borough":"Queens","nEla":73,"nMath":72,"ela":0.493,"math":0.903,"z":0.909,"lo":146,"hi":314},
+{"rank":219,"dbn":"28Q055","name":"P.S. 055 MAURE","borough":"Queens","nEla":130,"nMath":130,"ela":0.577,"math":0.8,"z":0.909,"lo":149,"hi":301},
+{"rank":220,"dbn":"14K132","name":"P.S. 132 THE CONSELYEA SCHOOL","borough":"Brooklyn","nEla":245,"nMath":242,"ela":0.637,"math":0.727,"z":0.908,"lo":169,"hi":291},
+{"rank":221,"dbn":"27Q108","name":"P.S. 108 CAPTAIN VINCENT G. FOWLER","borough":"Queens","nEla":477,"nMath":485,"ela":0.625,"math":0.734,"z":0.902,"lo":188,"hi":263},
+{"rank":222,"dbn":"02M130","name":"P.S. 130 HERNANDO DE SOTO","borough":"Manhattan","nEla":256,"nMath":256,"ela":0.602,"math":0.762,"z":0.898,"lo":176,"hi":277},
+{"rank":223,"dbn":"24Q087","name":"P.S./I.S. 087 MIDDLE VILLAGE","borough":"Queens","nEla":278,"nMath":281,"ela":0.637,"math":0.722,"z":0.898,"lo":178,"hi":274},
+{"rank":224,"dbn":"02M343","name":"THE PECK SLIP SCHOOL","borough":"Manhattan","nEla":112,"nMath":115,"ela":0.67,"math":0.696,"z":0.896,"lo":162,"hi":306},
+{"rank":225,"dbn":"20K748","name":"P.S. 748 BROOKLYN SCHOOL FOR GLOBAL SCHOLARS","borough":"Brooklyn","nEla":207,"nMath":211,"ela":0.614,"math":0.749,"z":0.895,"lo":174,"hi":290},
+{"rank":226,"dbn":"19K190","name":"P.S. 190 SHEFFIELD","borough":"Brooklyn","nEla":30,"nMath":32,"ela":0.6,"math":0.812,"z":0.891,"lo":102,"hi":392},
+{"rank":227,"dbn":"14K414","name":"BROOKLYN ARBOR ELEMENTARY SCHOOL","borough":"Brooklyn","nEla":207,"nMath":205,"ela":0.614,"math":0.746,"z":0.888,"lo":172,"hi":299},
+{"rank":228,"dbn":"06M366","name":"WASHINGTON HEIGHTS ACADEMY","borough":"Manhattan","nEla":203,"nMath":201,"ela":0.586,"math":0.776,"z":0.887,"lo":166,"hi":283},
+{"rank":229,"dbn":"26Q172","name":"IRWIN ALTMAN MIDDLE SCHOOL 172","borough":"Queens","nEla":754,"nMath":656,"ela":0.678,"math":0.666,"z":0.881,"lo":194,"hi":264},
+{"rank":230,"dbn":"30Q085","name":"P.S. 085 JUDGE CHARLES VALLONE","borough":"Queens","nEla":224,"nMath":217,"ela":0.638,"math":0.714,"z":0.878,"lo":168,"hi":285},
+{"rank":231,"dbn":"26Q026","name":"P.S. 026 RUFUS KING","borough":"Queens","nEla":228,"nMath":237,"ela":0.561,"math":0.797,"z":0.876,"lo":181,"hi":299},
+{"rank":232,"dbn":"20K180","name":"THE SEEALL ACADEMY","borough":"Brooklyn","nEla":635,"nMath":634,"ela":0.614,"math":0.732,"z":0.869,"lo":197,"hi":264},
+{"rank":233,"dbn":"15K032","name":"P.S. 032 SAMUEL MILLS SPROLE","borough":"Brooklyn","nEla":183,"nMath":183,"ela":0.65,"math":0.699,"z":0.869,"lo":179,"hi":303},
+{"rank":234,"dbn":"21K228","name":"I.S. 228 DAVID A. BOODY","borough":"Brooklyn","nEla":1498,"nMath":1482,"ela":0.625,"math":0.716,"z":0.863,"lo":214,"hi":252},
+{"rank":235,"dbn":"31R048","name":"P.S. 048 WILLIAM G. WILCOX","borough":"Staten Island","nEla":596,"nMath":479,"ela":0.619,"math":0.724,"z":0.862,"lo":197,"hi":270},
+{"rank":236,"dbn":"20K407","name":"SCHOOL OF TECHNOLOGY, ARTS, AND RESEARCH","borough":"Brooklyn","nEla":271,"nMath":275,"ela":0.642,"math":0.702,"z":0.861,"lo":182,"hi":291},
+{"rank":237,"dbn":"17K352","name":"EBBETS FIELD MIDDLE SCHOOL","borough":"Brooklyn","nEla":120,"nMath":121,"ela":0.642,"math":0.711,"z":0.86,"lo":186,"hi":322},
+{"rank":238,"dbn":"31R026","name":"P.S./I.S. 26 THE CARTERET SCHOOL","borough":"Staten Island","nEla":173,"nMath":175,"ela":0.607,"math":0.743,"z":0.857,"lo":175,"hi":323},
+{"rank":239,"dbn":"20K160","name":"P.S. 160 WILLIAM T. SAMPSON","borough":"Brooklyn","nEla":450,"nMath":465,"ela":0.536,"math":0.811,"z":0.846,"lo":195,"hi":285},
+{"rank":240,"dbn":"29Q259","name":"PATHWAYS COLLEGE PREPARATORY SCHOOL: A COLLEGE BOA","borough":"Queens","nEla":327,"nMath":301,"ela":0.661,"math":0.674,"z":0.845,"lo":194,"hi":280},
+{"rank":241,"dbn":"18K763","name":"BROOKLYN SCIENCE AND ENGINEERING ACADEMY","borough":"Brooklyn","nEla":358,"nMath":354,"ela":0.682,"math":0.65,"z":0.843,"lo":199,"hi":288},
+{"rank":242,"dbn":"06M311","name":"AMISTAD DUAL LANGUAGE SCHOOL","borough":"Manhattan","nEla":227,"nMath":196,"ela":0.617,"math":0.724,"z":0.843,"lo":186,"hi":313},
+{"rank":243,"dbn":"22K254","name":"P.S. 254 DAG HAMMARSKJOLD","borough":"Brooklyn","nEla":345,"nMath":350,"ela":0.571,"math":0.771,"z":0.843,"lo":194,"hi":276},
+{"rank":244,"dbn":"31R030","name":"P.S. 030 WESTERLEIGH","borough":"Staten Island","nEla":316,"nMath":319,"ela":0.585,"math":0.755,"z":0.841,"lo":199,"hi":280},
+{"rank":245,"dbn":"30Q151","name":"P.S. 151 MARY D. CARTER","borough":"Queens","nEla":138,"nMath":141,"ela":0.638,"math":0.702,"z":0.833,"lo":180,"hi":325},
+{"rank":246,"dbn":"13K915","name":"BRIDGES: A SCHOOL FOR EXPLORATION AND EQUITY","borough":"Brooklyn","nEla":293,"nMath":265,"ela":0.648,"math":0.683,"z":0.832,"lo":197,"hi":292},
+{"rank":247,"dbn":"24Q102","name":"P.S. 102 BAYVIEW","borough":"Queens","nEla":632,"nMath":607,"ela":0.584,"math":0.75,"z":0.829,"lo":199,"hi":276},
+{"rank":248,"dbn":"07X277","name":"P.S. 277","borough":"Bronx","nEla":100,"nMath":104,"ela":0.62,"math":0.721,"z":0.821,"lo":190,"hi":344},
+{"rank":249,"dbn":"30Q384","name":"HUNTERS POINT ELEMENTARY SCHOOL","borough":"Queens","nEla":192,"nMath":197,"ela":0.63,"math":0.701,"z":0.818,"lo":201,"hi":319},
+{"rank":250,"dbn":"02M042","name":"P.S. 042 BENJAMIN ALTMAN","borough":"Manhattan","nEla":220,"nMath":222,"ela":0.536,"math":0.802,"z":0.816,"lo":193,"hi":317},
+{"rank":251,"dbn":"30Q212","name":"P.S. 212","borough":"Queens","nEla":224,"nMath":225,"ela":0.594,"math":0.738,"z":0.814,"lo":194,"hi":313},
+{"rank":252,"dbn":"27Q114","name":"P.S./M.S. 114 BELLE HARBOR","borough":"Queens","nEla":320,"nMath":309,"ela":0.603,"math":0.725,"z":0.813,"lo":204,"hi":310},
+{"rank":253,"dbn":"24Q119","name":"P.S./I.S. 119 THE GLENDALE","borough":"Queens","nEla":846,"nMath":733,"ela":0.628,"math":0.694,"z":0.813,"lo":220,"hi":289},
+{"rank":254,"dbn":"23K599","name":"BROOKLYN LANDMARK ELEMENTARY SCHOOL","borough":"Brooklyn","nEla":140,"nMath":144,"ela":0.643,"math":0.688,"z":0.812,"lo":198,"hi":338},
+{"rank":255,"dbn":"03M256","name":"LAFAYETTE ACADEMY","borough":"Manhattan","nEla":177,"nMath":175,"ela":0.667,"math":0.657,"z":0.807,"lo":196,"hi":326},
+{"rank":256,"dbn":"05M517","name":"TEACHERS COLLEGE COMMUNITY SCHOOL","borough":"Manhattan","nEla":147,"nMath":86,"ela":0.571,"math":0.767,"z":0.804,"lo":179,"hi":342},
+{"rank":257,"dbn":"21K095","name":"P.S. 095 THE GRAVESEND","borough":"Brooklyn","nEla":573,"nMath":580,"ela":0.564,"math":0.76,"z":0.799,"lo":211,"hi":290},
+{"rank":258,"dbn":"03M452","name":"P.S. 452","borough":"Manhattan","nEla":130,"nMath":132,"ela":0.623,"math":0.705,"z":0.798,"lo":188,"hi":342},
+{"rank":259,"dbn":"20K205","name":"P.S. 205 CLARION","borough":"Brooklyn","nEla":448,"nMath":461,"ela":0.565,"math":0.759,"z":0.797,"lo":215,"hi":305},
+{"rank":260,"dbn":"29Q131","name":"P.S. 131 ABIGAIL ADAMS","borough":"Queens","nEla":364,"nMath":370,"ela":0.536,"math":0.792,"z":0.797,"lo":202,"hi":299},
+{"rank":261,"dbn":"18K114","name":"P.S. 114 RYDER ELEMENTARY","borough":"Brooklyn","nEla":125,"nMath":123,"ela":0.56,"math":0.772,"z":0.793,"lo":191,"hi":350},
+{"rank":262,"dbn":"08X075","name":"P.S. 75 SCHOOL OF RESEARCH AND DISCOVERY","borough":"Bronx","nEla":159,"nMath":161,"ela":0.528,"math":0.801,"z":0.786,"lo":200,"hi":320},
+{"rank":263,"dbn":"30Q291","name":"HUNTERS POINT COMMUNITY MIDDLE SCHOOL","borough":"Queens","nEla":381,"nMath":277,"ela":0.677,"math":0.628,"z":0.776,"lo":212,"hi":306},
+{"rank":264,"dbn":"28Q140","name":"P.S. 140 EDWARD K ELLINGTON","borough":"Queens","nEla":112,"nMath":111,"ela":0.643,"math":0.676,"z":0.775,"lo":181,"hi":364},
+{"rank":265,"dbn":"28Q139","name":"P.S. 139 REGO PARK","borough":"Queens","nEla":228,"nMath":233,"ela":0.539,"math":0.781,"z":0.774,"lo":205,"hi":319},
+{"rank":266,"dbn":"28Q354","name":"THE JERMAINE L. GREEN STEM INSTITUTE OF QUEENS","borough":"Queens","nEla":190,"nMath":191,"ela":0.532,"math":0.791,"z":0.772,"lo":206,"hi":326},
+{"rank":267,"dbn":"26Q173","name":"P.S. 173 FRESH MEADOWS","borough":"Queens","nEla":445,"nMath":460,"ela":0.557,"math":0.757,"z":0.769,"lo":216,"hi":309},
+{"rank":268,"dbn":"15K295","name":"P.S. 295","borough":"Brooklyn","nEla":53,"nMath":52,"ela":0.585,"math":0.75,"z":0.764,"lo":169,"hi":398},
+{"rank":269,"dbn":"01M361","name":"THE CHILDREN'S WORKSHOP SCHOOL","borough":"Manhattan","nEla":97,"nMath":96,"ela":0.639,"math":0.677,"z":0.763,"lo":193,"hi":364},
+{"rank":270,"dbn":"30Q429","name":"SUNNYSIDE MIDDLE SCHOOL","borough":"Queens","nEla":360,"nMath":309,"ela":0.633,"math":0.67,"z":0.759,"lo":228,"hi":325},
+{"rank":271,"dbn":"27Q317","name":"WATERSIDE CHILDREN'S STUDIO SCHOOL","borough":"Queens","nEla":167,"nMath":164,"ela":0.587,"math":0.726,"z":0.758,"lo":205,"hi":346},
+{"rank":272,"dbn":"20K069","name":"P.S. 69 VINCENT D. GRIPPO SCHOOL","borough":"Brooklyn","nEla":259,"nMath":270,"ela":0.502,"math":0.815,"z":0.757,"lo":214,"hi":330},
+{"rank":273,"dbn":"02M217","name":"P.S./I.S. 217 ROOSEVELT ISLAND","borough":"Manhattan","nEla":328,"nMath":324,"ela":0.616,"math":0.688,"z":0.756,"lo":219,"hi":322},
+{"rank":274,"dbn":"27Q362","name":"WAVE PREPARATORY ELEMENTARY SCHOOL","borough":"Queens","nEla":162,"nMath":158,"ela":0.617,"math":0.69,"z":0.751,"lo":195,"hi":344},
+{"rank":275,"dbn":"31R055","name":"P.S. 055 HENRY M. BOEHM","borough":"Staten Island","nEla":241,"nMath":242,"ela":0.598,"math":0.707,"z":0.747,"lo":233,"hi":337},
+{"rank":276,"dbn":"27Q096","name":"P.S. 096","borough":"Queens","nEla":127,"nMath":130,"ela":0.622,"math":0.685,"z":0.745,"lo":206,"hi":366},
+{"rank":277,"dbn":"28Q190","name":"J.H.S. 190 RUSSELL SAGE","borough":"Queens","nEla":833,"nMath":565,"ela":0.646,"math":0.648,"z":0.744,"lo":229,"hi":319},
+{"rank":278,"dbn":"31R054","name":"P.S. 054 CHARLES W. LENG","borough":"Staten Island","nEla":303,"nMath":308,"ela":0.578,"math":0.724,"z":0.739,"lo":220,"hi":329},
+{"rank":279,"dbn":"17K316","name":"P.S. 316 ELIJAH STROUD","borough":"Brooklyn","nEla":248,"nMath":247,"ela":0.605,"math":0.692,"z":0.732,"lo":209,"hi":331},
+{"rank":280,"dbn":"25Q194","name":"J.H.S. 194 WILLIAM CARR","borough":"Queens","nEla":871,"nMath":739,"ela":0.66,"math":0.627,"z":0.731,"lo":245,"hi":309},
+{"rank":281,"dbn":"20K682","name":"THE ACADEMY OF TALENTED SCHOLARS","borough":"Brooklyn","nEla":187,"nMath":189,"ela":0.604,"math":0.693,"z":0.728,"lo":203,"hi":345},
+{"rank":282,"dbn":"14K297","name":"P.S. 297 ABRAHAM STOCKTON","borough":"Brooklyn","nEla":92,"nMath":92,"ela":0.587,"math":0.717,"z":0.721,"lo":186,"hi":382},
+{"rank":283,"dbn":"25Q025","name":"I.S. 025 ADRIEN BLOCK","borough":"Queens","nEla":964,"nMath":648,"ela":0.631,"math":0.654,"z":0.719,"lo":249,"hi":311},
+{"rank":284,"dbn":"11X468","name":"PELHAM ACADEMY OF ACADEMICS AND COMMUNITY ENGAGEME","borough":"Bronx","nEla":207,"nMath":142,"ela":0.604,"math":0.69,"z":0.717,"lo":214,"hi":365},
+{"rank":285,"dbn":"22K197","name":"P.S. 197 - THE KINGS HIGHWAY ACADEMY","borough":"Brooklyn","nEla":469,"nMath":478,"ela":0.522,"math":0.774,"z":0.716,"lo":238,"hi":326},
+{"rank":286,"dbn":"15K130","name":"P.S. 130 THE PARKSIDE","borough":"Brooklyn","nEla":374,"nMath":375,"ela":0.62,"math":0.667,"z":0.715,"lo":237,"hi":320},
+{"rank":287,"dbn":"06M223","name":"THE MOTT HALL SCHOOL","borough":"Manhattan","nEla":298,"nMath":206,"ela":0.658,"math":0.626,"z":0.713,"lo":222,"hi":345},
+{"rank":288,"dbn":"11X068","name":"P.S. 068 BRONX","borough":"Bronx","nEla":220,"nMath":226,"ela":0.605,"math":0.686,"z":0.713,"lo":221,"hi":340},
+{"rank":289,"dbn":"01M315","name":"THE EAST VILLAGE COMMUNITY SCHOOL","borough":"Manhattan","nEla":143,"nMath":145,"ela":0.622,"math":0.669,"z":0.711,"lo":214,"hi":351},
+{"rank":290,"dbn":"26Q162","name":"P.S. 162 JOHN GOLDEN","borough":"Queens","nEla":227,"nMath":236,"ela":0.529,"math":0.767,"z":0.708,"lo":228,"hi":356},
+{"rank":291,"dbn":"27Q146","name":"P.S. 146 HOWARD BEACH","borough":"Queens","nEla":280,"nMath":275,"ela":0.593,"math":0.695,"z":0.706,"lo":235,"hi":340},
+{"rank":292,"dbn":"28Q160","name":"P.S. 160 WALTER FRANCIS BISHOP","borough":"Queens","nEla":223,"nMath":228,"ela":0.574,"math":0.715,"z":0.702,"lo":225,"hi":356},
+{"rank":293,"dbn":"19K306","name":"P.S. 306 ETHAN ALLEN","borough":"Brooklyn","nEla":117,"nMath":117,"ela":0.598,"math":0.692,"z":0.698,"lo":201,"hi":378},
+{"rank":294,"dbn":"01M110","name":"P.S. 110 FLORENCE NIGHTINGALE","borough":"Manhattan","nEla":111,"nMath":111,"ela":0.622,"math":0.667,"z":0.696,"lo":216,"hi":394},
+{"rank":295,"dbn":"14K147","name":"P.S. 147 ISAAC REMSEN","borough":"Brooklyn","nEla":43,"nMath":41,"ela":0.535,"math":0.78,"z":0.694,"lo":180,"hi":417},
+{"rank":296,"dbn":"22K889","name":"P.S. 889","borough":"Brooklyn","nEla":178,"nMath":179,"ela":0.629,"math":0.648,"z":0.682,"lo":219,"hi":369},
+{"rank":297,"dbn":"08X101","name":"M.S. X101 EDWARD R. BYRNE","borough":"Bronx","nEla":508,"nMath":398,"ela":0.667,"math":0.601,"z":0.681,"lo":253,"hi":339},
+{"rank":298,"dbn":"27Q297","name":"HAWTREE CREEK MIDDLE SCHOOL","borough":"Queens","nEla":316,"nMath":288,"ela":0.589,"math":0.688,"z":0.677,"lo":236,"hi":339},
+{"rank":299,"dbn":"21K100","name":"P.S. 100 THE CONEY ISLAND SCHOOL","borough":"Brooklyn","nEla":258,"nMath":259,"ela":0.55,"math":0.73,"z":0.676,"lo":231,"hi":346},
+{"rank":300,"dbn":"17K770","name":"P.S. 770 NEW AMERICAN ACADEMY","borough":"Brooklyn","nEla":83,"nMath":84,"ela":0.639,"math":0.643,"z":0.672,"lo":201,"hi":426},
+{"rank":301,"dbn":"31R013","name":"P.S. 013 M. L. LINDEMEYER","borough":"Staten Island","nEla":322,"nMath":324,"ela":0.565,"math":0.71,"z":0.67,"lo":250,"hi":344},
+{"rank":302,"dbn":"24Q049","name":"P.S. 049 DOROTHY BONAWIT KOLE","borough":"Queens","nEla":763,"nMath":670,"ela":0.562,"math":0.71,"z":0.668,"lo":259,"hi":340},
+{"rank":303,"dbn":"06M314","name":"MUSCOTA","borough":"Manhattan","nEla":125,"nMath":124,"ela":0.568,"math":0.71,"z":0.661,"lo":234,"hi":396},
+{"rank":304,"dbn":"22K277","name":"P.S. 277 GERRITSEN BEACH","borough":"Brooklyn","nEla":120,"nMath":120,"ela":0.6,"math":0.675,"z":0.661,"lo":223,"hi":382},
+{"rank":305,"dbn":"15K676","name":"RED HOOK NEIGHBORHOOD SCHOOL","borough":"Brooklyn","nEla":129,"nMath":115,"ela":0.659,"math":0.609,"z":0.657,"lo":229,"hi":389},
+{"rank":306,"dbn":"11X019","name":"P.S. 019 JUDITH K. WEISS","borough":"Bronx","nEla":442,"nMath":419,"ela":0.597,"math":0.668,"z":0.656,"lo":251,"hi":349},
+{"rank":307,"dbn":"13K492","name":"ACADEMY OF ARTS AND LETTERS","borough":"Brooklyn","nEla":457,"nMath":397,"ela":0.617,"math":0.642,"z":0.646,"lo":249,"hi":349},
+{"rank":308,"dbn":"21K216","name":"P.S. 216 ARTURO TOSCANINI","borough":"Brooklyn","nEla":307,"nMath":307,"ela":0.531,"math":0.736,"z":0.64,"lo":241,"hi":348},
+{"rank":309,"dbn":"20K186","name":"P.S. 186 DR. IRVING A GLADSTONE","borough":"Brooklyn","nEla":472,"nMath":486,"ela":0.521,"math":0.745,"z":0.638,"lo":255,"hi":350},
+{"rank":310,"dbn":"30Q126","name":"ALBERT SHANKER SCHOOL FOR VISUAL AND PERFORMING AR","borough":"Queens","nEla":357,"nMath":302,"ela":0.633,"math":0.623,"z":0.638,"lo":261,"hi":361},
+{"rank":311,"dbn":"29Q038","name":"P.S. 038 ROSEDALE","borough":"Queens","nEla":97,"nMath":91,"ela":0.598,"math":0.67,"z":0.637,"lo":201,"hi":393},
+{"rank":312,"dbn":"21K097","name":"P.S. 97 THE HIGHLAWN","borough":"Brooklyn","nEla":372,"nMath":380,"ela":0.503,"math":0.763,"z":0.632,"lo":245,"hi":359},
+{"rank":313,"dbn":"08X304","name":"P.S. 304 EARLY CHILDHOOD SCHOOL","borough":"Bronx","nEla":240,"nMath":244,"ela":0.583,"math":0.676,"z":0.632,"lo":249,"hi":373},
+{"rank":314,"dbn":"30Q017","name":"P.S. 017 HENRY DAVID THOREAU","borough":"Queens","nEla":226,"nMath":227,"ela":0.544,"math":0.718,"z":0.628,"lo":262,"hi":388},
+{"rank":315,"dbn":"28Q175","name":"P.S. 175 THE LYNN GROSS DISCOVERY SCHOOL","borough":"Queens","nEla":254,"nMath":258,"ela":0.516,"math":0.748,"z":0.626,"lo":269,"hi":375},
+{"rank":316,"dbn":"30Q002","name":"P.S. 002 ALFRED ZIMBERG","borough":"Queens","nEla":210,"nMath":213,"ela":0.586,"math":0.671,"z":0.624,"lo":243,"hi":371},
+{"rank":317,"dbn":"29Q095","name":"P.S. 095 EASTWOOD","borough":"Queens","nEla":471,"nMath":478,"ela":0.51,"math":0.751,"z":0.621,"lo":262,"hi":350},
+{"rank":318,"dbn":"25Q285","name":"WORLD JOURNALISM PREPARATORY: A COLLEGE BOARD SCHO","borough":"Queens","nEla":250,"nMath":160,"ela":0.624,"math":0.625,"z":0.614,"lo":231,"hi":385},
+{"rank":319,"dbn":"26Q018","name":"P.S. 018 WINCHESTER","borough":"Queens","nEla":136,"nMath":141,"ela":0.537,"math":0.723,"z":0.613,"lo":245,"hi":378},
+{"rank":320,"dbn":"12X044","name":"P.S. 044 DAVID C. FARRAGUT","borough":"Bronx","nEla":58,"nMath":59,"ela":0.603,"math":0.661,"z":0.61,"lo":217,"hi":428},
+{"rank":321,"dbn":"25Q022","name":"P.S. 022 THOMAS JEFFERSON","borough":"Queens","nEla":365,"nMath":374,"ela":0.529,"math":0.725,"z":0.606,"lo":274,"hi":363},
+{"rank":322,"dbn":"27Q047","name":"P.S. 047 CHRIS GALAS","borough":"Queens","nEla":128,"nMath":108,"ela":0.57,"math":0.685,"z":0.605,"lo":248,"hi":401},
+{"rank":323,"dbn":"31R001","name":"P.S. 001 TOTTENVILLE","borough":"Staten Island","nEla":210,"nMath":213,"ela":0.638,"math":0.606,"z":0.603,"lo":254,"hi":385},
+{"rank":324,"dbn":"04M083","name":"P.S. 083 LUIS MUNOZ RIVERA","borough":"Manhattan","nEla":115,"nMath":116,"ela":0.557,"math":0.698,"z":0.6,"lo":233,"hi":411},
+{"rank":325,"dbn":"20K220","name":"J.H.S. 220 JOHN J. PERSHING","borough":"Brooklyn","nEla":1113,"nMath":1176,"ela":0.486,"math":0.767,"z":0.599,"lo":287,"hi":349},
+{"rank":326,"dbn":"31R004","name":"P.S. 004 MAURICE WOLLIN","borough":"Staten Island","nEla":365,"nMath":367,"ela":0.545,"math":0.703,"z":0.597,"lo":267,"hi":376},
+{"rank":327,"dbn":"31R036","name":"P.S. 036 J. C. DRUMGOOLE","borough":"Staten Island","nEla":358,"nMath":359,"ela":0.587,"math":0.655,"z":0.59,"lo":270,"hi":373},
+{"rank":328,"dbn":"19K013","name":"P.S. 013 ROBERTO CLEMENTE","borough":"Brooklyn","nEla":130,"nMath":131,"ela":0.608,"math":0.634,"z":0.581,"lo":224,"hi":419},
+{"rank":329,"dbn":"06M192","name":"P.S. 192 JACOB H. SCHIFF","borough":"Manhattan","nEla":94,"nMath":98,"ela":0.468,"math":0.786,"z":0.575,"lo":230,"hi":393},
+{"rank":330,"dbn":"21K177","name":"P.S. 177 THE MARLBORO","borough":"Brooklyn","nEla":394,"nMath":401,"ela":0.508,"math":0.733,"z":0.569,"lo":281,"hi":379},
+{"rank":331,"dbn":"10X141","name":"RIVERDALE / KINGSBRIDGE ACADEMY (MIDDLE SCHOOL / H","borough":"Bronx","nEla":662,"nMath":517,"ela":0.631,"math":0.596,"z":0.569,"lo":284,"hi":374},
+{"rank":332,"dbn":"27Q282","name":"KNOWLEDGE AND POWER PREPARATORY ACADEMY VI","borough":"Queens","nEla":267,"nMath":262,"ela":0.655,"math":0.569,"z":0.561,"lo":281,"hi":402},
+{"rank":333,"dbn":"14K577","name":"CONSELYEA PREPARATORY SCHOOL","borough":"Brooklyn","nEla":289,"nMath":265,"ela":0.64,"math":0.585,"z":0.561,"lo":288,"hi":392},
+{"rank":334,"dbn":"29Q034","name":"P.S. 034 JOHN HARVARD","borough":"Queens","nEla":163,"nMath":173,"ela":0.564,"math":0.671,"z":0.56,"lo":267,"hi":400},
+{"rank":335,"dbn":"26Q046","name":"P.S. 046 ALLEY POND","borough":"Queens","nEla":206,"nMath":208,"ela":0.495,"math":0.745,"z":0.56,"lo":273,"hi":397},
+{"rank":336,"dbn":"15K497","name":"THE BOERUM HILL SCHOOL FOR INTERNATIONAL STUDIES","borough":"Brooklyn","nEla":339,"nMath":230,"ela":0.602,"math":0.626,"z":0.558,"lo":280,"hi":403},
+{"rank":337,"dbn":"31R861","name":"STATEN ISLAND SCHOOL OF CIVIC LEADERSHIP","borough":"Staten Island","nEla":516,"nMath":516,"ela":0.554,"math":0.676,"z":0.557,"lo":289,"hi":368},
+{"rank":338,"dbn":"09X204","name":"P.S. 204 MORRIS HEIGHTS","borough":"Bronx","nEla":258,"nMath":260,"ela":0.554,"math":0.673,"z":0.544,"lo":283,"hi":391},
+{"rank":339,"dbn":"05M092","name":"P.S. 092 MARY MCLEOD BETHUNE","borough":"Manhattan","nEla":46,"nMath":48,"ela":0.478,"math":0.771,"z":0.543,"lo":242,"hi":443},
+{"rank":340,"dbn":"31R042","name":"P.S. 042 ELTINGVILLE","borough":"Staten Island","nEla":480,"nMath":487,"ela":0.55,"math":0.676,"z":0.543,"lo":300,"hi":388},
+{"rank":341,"dbn":"24Q343","name":"THE CHILDREN'S LAB SCHOOL","borough":"Queens","nEla":214,"nMath":219,"ela":0.556,"math":0.671,"z":0.542,"lo":270,"hi":392},
+{"rank":342,"dbn":"24Q113","name":"P.S./I.S. 113 ANTHONY J. PRANZO","borough":"Queens","nEla":499,"nMath":497,"ela":0.571,"math":0.652,"z":0.542,"lo":309,"hi":387},
+{"rank":343,"dbn":"23K041","name":"P.S. 041 FRANCIS WHITE","borough":"Brooklyn","nEla":85,"nMath":80,"ela":0.635,"math":0.588,"z":0.531,"lo":265,"hi":436},
+{"rank":344,"dbn":"24Q081","name":"P.S. 81Q JEAN PAUL RICHTER","borough":"Queens","nEla":284,"nMath":283,"ela":0.454,"math":0.777,"z":0.53,"lo":279,"hi":395},
+{"rank":345,"dbn":"29Q181","name":"P.S. 181 BROOKFIELD","borough":"Queens","nEla":111,"nMath":109,"ela":0.532,"math":0.697,"z":0.53,"lo":275,"hi":450},
+{"rank":346,"dbn":"14K257","name":"P.S. 257 JOHN F. HYLAN","borough":"Brooklyn","nEla":178,"nMath":183,"ela":0.551,"math":0.672,"z":0.527,"lo":278,"hi":424},
+{"rank":347,"dbn":"17K397","name":"P.S. 397 FOSTER-LAURIE","borough":"Brooklyn","nEla":68,"nMath":69,"ela":0.603,"math":0.623,"z":0.526,"lo":255,"hi":460},
+{"rank":348,"dbn":"02M225","name":"ELLA BAKER SCHOOL","borough":"Manhattan","nEla":141,"nMath":140,"ela":0.638,"math":0.571,"z":0.512,"lo":254,"hi":433},
+{"rank":349,"dbn":"07X025","name":"P.S. 025 BILINGUAL SCHOOL","borough":"Bronx","nEla":129,"nMath":132,"ela":0.558,"math":0.659,"z":0.511,"lo":278,"hi":420},
+{"rank":350,"dbn":"22K234","name":"J.H.S. 234 ARTHUR W. CUNNINGHAM","borough":"Brooklyn","nEla":1376,"nMath":1389,"ela":0.548,"math":0.662,"z":0.504,"lo":328,"hi":376},
+{"rank":351,"dbn":"20K936","name":"MS 936 ARTS OFF 3RD","borough":"Brooklyn","nEla":417,"nMath":370,"ela":0.564,"math":0.646,"z":0.504,"lo":296,"hi":386},
+{"rank":352,"dbn":"29Q208","name":"P.S./I.S. 208","borough":"Queens","nEla":407,"nMath":382,"ela":0.563,"math":0.647,"z":0.503,"lo":302,"hi":410},
+{"rank":353,"dbn":"30Q141","name":"I.S. 141 THE STEINWAY","borough":"Queens","nEla":851,"nMath":583,"ela":0.597,"math":0.607,"z":0.502,"lo":312,"hi":379},
+{"rank":354,"dbn":"22K255","name":"P.S. 255 BARBARA REING SCHOOL","borough":"Brooklyn","nEla":377,"nMath":386,"ela":0.552,"math":0.658,"z":0.502,"lo":300,"hi":397},
+{"rank":355,"dbn":"24Q128","name":"P.S. 128 THE LORRAINE TUZZO, JUNIPER VALLEY ELEMEN","borough":"Queens","nEla":392,"nMath":334,"ela":0.574,"math":0.632,"z":0.497,"lo":308,"hi":405},
+{"rank":356,"dbn":"27Q137","name":"M.S. 137 AMERICA'S SCHOOL OF HEROES","borough":"Queens","nEla":1451,"nMath":960,"ela":0.586,"math":0.615,"z":0.493,"lo":313,"hi":370},
+{"rank":357,"dbn":"20K048","name":"P.S. 048 MAPLETON","borough":"Brooklyn","nEla":211,"nMath":219,"ela":0.531,"math":0.676,"z":0.484,"lo":289,"hi":417},
+{"rank":358,"dbn":"31R065","name":"P.S. 65 THE ACADEMY OF INNOVATIVE LEARNING","borough":"Staten Island","nEla":156,"nMath":160,"ela":0.577,"math":0.625,"z":0.48,"lo":295,"hi":419},
+{"rank":359,"dbn":"25Q165","name":"P.S. 165 EDITH K. BERGTRAUM","borough":"Queens","nEla":258,"nMath":263,"ela":0.531,"math":0.669,"z":0.47,"lo":301,"hi":409},
+{"rank":360,"dbn":"28Q284","name":"YORK EARLY COLLEGE ACADEMY","borough":"Queens","nEla":252,"nMath":171,"ela":0.591,"math":0.602,"z":0.467,"lo":297,"hi":431},
+{"rank":361,"dbn":"02M413","name":"SCHOOL OF THE FUTURE HIGH SCHOOL","borough":"Manhattan","nEla":204,"nMath":185,"ela":0.632,"math":0.557,"z":0.465,"lo":292,"hi":427},
+{"rank":362,"dbn":"16K267","name":"M.S. 267 MATH, SCIENCE & TECHNOLOGY","borough":"Brooklyn","nEla":107,"nMath":88,"ela":0.636,"math":0.557,"z":0.464,"lo":304,"hi":468},
+{"rank":363,"dbn":"31R080","name":"THE MICHAEL J. PETRIDES SCHOOL","borough":"Staten Island","nEla":624,"nMath":493,"ela":0.596,"math":0.592,"z":0.461,"lo":333,"hi":399},
+{"rank":364,"dbn":"22K312","name":"P.S. 312 BERGEN BEACH","borough":"Brooklyn","nEla":284,"nMath":287,"ela":0.521,"math":0.676,"z":0.46,"lo":324,"hi":417},
+{"rank":365,"dbn":"13K009","name":"PUBLIC SCHOOL 9 THE SARAH SMITH GARNET SCHOOL","borough":"Brooklyn","nEla":253,"nMath":255,"ela":0.565,"math":0.627,"z":0.459,"lo":299,"hi":420},
+{"rank":366,"dbn":"10X279","name":"P.S. 279 CAPTAIN MANUEL RIVERA, JR.","borough":"Bronx","nEla":441,"nMath":442,"ela":0.542,"math":0.652,"z":0.459,"lo":308,"hi":408},
+{"rank":367,"dbn":"29Q251","name":"P.S. 251 QUEENS","borough":"Queens","nEla":81,"nMath":73,"ela":0.556,"math":0.644,"z":0.456,"lo":265,"hi":455},
+{"rank":368,"dbn":"25Q214","name":"P.S. 214 CADWALLADER COLDEN","borough":"Queens","nEla":173,"nMath":170,"ela":0.52,"math":0.676,"z":0.454,"lo":301,"hi":434},
+{"rank":369,"dbn":"06M103","name":"DOS PUENTES ELEMENTARY SCHOOL","borough":"Manhattan","nEla":183,"nMath":190,"ela":0.541,"math":0.653,"z":0.453,"lo":305,"hi":433},
+{"rank":370,"dbn":"27Q207","name":"P.S. 207 ROCKWOOD PARK","borough":"Queens","nEla":347,"nMath":352,"ela":0.51,"math":0.685,"z":0.452,"lo":310,"hi":423},
+{"rank":371,"dbn":"12X211","name":"P.S. 211","borough":"Bronx","nEla":49,"nMath":49,"ela":0.531,"math":0.673,"z":0.45,"lo":281,"hi":518},
+{"rank":372,"dbn":"17K221","name":"P.S. 221 TOUSSAINT L'OUVERTURE","borough":"Brooklyn","nEla":43,"nMath":48,"ela":0.535,"math":0.667,"z":0.443,"lo":264,"hi":469},
+{"rank":373,"dbn":"25Q200","name":"P.S./M.S. 200 - THE MAGNET SCHOOL OF GLOBAL STUDIE","borough":"Queens","nEla":298,"nMath":297,"ela":0.591,"math":0.593,"z":0.443,"lo":320,"hi":423},
+{"rank":374,"dbn":"25Q219","name":"P.S. 219 PAUL KLAPPER","borough":"Queens","nEla":347,"nMath":287,"ela":0.545,"math":0.641,"z":0.438,"lo":321,"hi":419},
+{"rank":375,"dbn":"07X223","name":"THE LABORATORY SCHOOL OF FINANCE AND TECHNOLOGY: X","borough":"Bronx","nEla":245,"nMath":240,"ela":0.543,"math":0.642,"z":0.433,"lo":316,"hi":422},
+{"rank":376,"dbn":"24Q073","name":"I.S. 73 - THE FRANK SANSIVIERI INTERMEDIATE SCHOOL","borough":"Queens","nEla":1405,"nMath":1226,"ela":0.58,"math":0.597,"z":0.43,"lo":343,"hi":398},
+{"rank":377,"dbn":"11X556","name":"BRONX PARK MIDDLE SCHOOL","borough":"Bronx","nEla":206,"nMath":214,"ela":0.597,"math":0.579,"z":0.424,"lo":319,"hi":450},
+{"rank":378,"dbn":"29Q118","name":"P.S. 118 LORRAINE HANSBERRY","borough":"Queens","nEla":144,"nMath":148,"ela":0.451,"math":0.736,"z":0.415,"lo":300,"hi":444},
+{"rank":379,"dbn":"26Q213","name":"P.S. 213 THE CARL ULLMAN SCHOOL","borough":"Queens","nEla":156,"nMath":161,"ela":0.545,"math":0.634,"z":0.414,"lo":301,"hi":456},
+{"rank":380,"dbn":"18K268","name":"P.S. 268 EMMA LAZARUS","borough":"Brooklyn","nEla":105,"nMath":102,"ela":0.514,"math":0.667,"z":0.408,"lo":306,"hi":469},
+{"rank":381,"dbn":"31R058","name":"SPACE SHUTTLE COLUMBIA SCHOOL","borough":"Staten Island","nEla":321,"nMath":324,"ela":0.536,"math":0.639,"z":0.408,"lo":320,"hi":433},
+{"rank":382,"dbn":"08X583","name":"P.S. 583","borough":"Bronx","nEla":183,"nMath":185,"ela":0.486,"math":0.692,"z":0.401,"lo":300,"hi":448},
+{"rank":383,"dbn":"07X049","name":"P.S. 049 WILLIS AVENUE","borough":"Bronx","nEla":164,"nMath":165,"ela":0.47,"math":0.709,"z":0.397,"lo":312,"hi":464},
+{"rank":384,"dbn":"13K056","name":"P.S. 056 LEWIS H. LATIMER","borough":"Brooklyn","nEla":87,"nMath":87,"ela":0.563,"math":0.609,"z":0.395,"lo":290,"hi":497},
+{"rank":385,"dbn":"31R006","name":"P.S. 6 CORPORAL ALLAN F. KIVLEHAN SCHOOL","borough":"Staten Island","nEla":232,"nMath":232,"ela":0.517,"math":0.655,"z":0.395,"lo":324,"hi":447},
+{"rank":386,"dbn":"25Q021","name":"P.S. 021 EDWARD HART","borough":"Queens","nEla":536,"nMath":548,"ela":0.522,"math":0.646,"z":0.39,"lo":346,"hi":415},
+{"rank":387,"dbn":"27Q123","name":"P.S. 123","borough":"Queens","nEla":245,"nMath":249,"ela":0.518,"math":0.651,"z":0.387,"lo":333,"hi":447},
+{"rank":388,"dbn":"21K121","name":"P.S. 121 NELSON A. ROCKEFELLER","borough":"Brooklyn","nEla":170,"nMath":170,"ela":0.571,"math":0.594,"z":0.387,"lo":314,"hi":462},
+{"rank":389,"dbn":"20K104","name":"P.S./I.S. 104 THE FORT HAMILTON SCHOOL","borough":"Brooklyn","nEla":634,"nMath":614,"ela":0.571,"math":0.59,"z":0.383,"lo":345,"hi":416},
+{"rank":390,"dbn":"11X169","name":"BAYCHESTER ACADEMY","borough":"Bronx","nEla":122,"nMath":123,"ela":0.525,"math":0.642,"z":0.378,"lo":321,"hi":469},
+{"rank":391,"dbn":"25Q237","name":"I.S. 237","borough":"Queens","nEla":1119,"nMath":932,"ela":0.534,"math":0.628,"z":0.376,"lo":355,"hi":414},
+{"rank":392,"dbn":"17K091","name":"P.S. 091 THE ALBANY AVENUE SCHOOL","borough":"Brooklyn","nEla":58,"nMath":58,"ela":0.5,"math":0.672,"z":0.375,"lo":281,"hi":520},
+{"rank":393,"dbn":"14K017","name":"P.S. 017 HENRY D. WOODWORTH","borough":"Brooklyn","nEla":109,"nMath":107,"ela":0.505,"math":0.664,"z":0.375,"lo":311,"hi":475},
+{"rank":394,"dbn":"22K193","name":"P.S. 193 GIL HODGES","borough":"Brooklyn","nEla":199,"nMath":203,"ela":0.523,"math":0.635,"z":0.36,"lo":340,"hi":455},
+{"rank":395,"dbn":"30Q069","name":"P.S. 069 JACKSON HEIGHTS","borough":"Queens","nEla":320,"nMath":332,"ela":0.519,"math":0.639,"z":0.359,"lo":347,"hi":449},
+{"rank":396,"dbn":"27Q060","name":"P.S. 060 WOODHAVEN","borough":"Queens","nEla":372,"nMath":377,"ela":0.505,"math":0.653,"z":0.358,"lo":346,"hi":435},
+{"rank":397,"dbn":"30Q230","name":"I.S. 230","borough":"Queens","nEla":863,"nMath":577,"ela":0.546,"math":0.607,"z":0.356,"lo":353,"hi":429},
+{"rank":398,"dbn":"12X463","name":"URBAN SCHOLARS COMMUNITY SCHOOL","borough":"Bronx","nEla":102,"nMath":105,"ela":0.529,"math":0.629,"z":0.356,"lo":325,"hi":494},
+{"rank":399,"dbn":"31R063","name":"MARSH AVENUE SCHOOL FOR EXPEDITIONARY LEARNING","borough":"Staten Island","nEla":415,"nMath":353,"ela":0.612,"math":0.533,"z":0.352,"lo":349,"hi":442},
+{"rank":400,"dbn":"11X160","name":"P.S. 160 WALT DISNEY","borough":"Bronx","nEla":116,"nMath":120,"ela":0.569,"math":0.583,"z":0.352,"lo":334,"hi":492},
+{"rank":401,"dbn":"31R039","name":"P.S. 39 FRANCIS J. MURPHY JR.","borough":"Staten Island","nEla":217,"nMath":218,"ela":0.438,"math":0.725,"z":0.351,"lo":346,"hi":460},
+{"rank":402,"dbn":"12X691","name":"BRONX LITTLE SCHOOL","borough":"Bronx","nEla":116,"nMath":122,"ela":0.509,"math":0.648,"z":0.348,"lo":337,"hi":460},
+{"rank":403,"dbn":"12X458","name":"SAMARA COMMUNITY SCHOOL","borough":"Bronx","nEla":130,"nMath":134,"ela":0.531,"math":0.619,"z":0.339,"lo":317,"hi":503},
+{"rank":404,"dbn":"20K200","name":"P.S. 200 BENSON SCHOOL","borough":"Brooklyn","nEla":571,"nMath":580,"ela":0.494,"math":0.657,"z":0.338,"lo":365,"hi":442},
+{"rank":405,"dbn":"20K204","name":"P.S. 204 VINCE LOMBARDI","borough":"Brooklyn","nEla":495,"nMath":503,"ela":0.489,"math":0.662,"z":0.337,"lo":355,"hi":442},
+{"rank":406,"dbn":"21K281","name":"I.S. 281 JOSEPH B CAVALLARO","borough":"Brooklyn","nEla":1017,"nMath":1037,"ela":0.495,"math":0.655,"z":0.335,"lo":367,"hi":429},
+{"rank":407,"dbn":"17K375","name":"P.S. 375 JACKIE ROBINSON SCHOOL","borough":"Brooklyn","nEla":55,"nMath":57,"ela":0.473,"math":0.684,"z":0.334,"lo":288,"hi":526},
+{"rank":408,"dbn":"10X344","name":"AMPARK NEIGHBORHOOD","borough":"Bronx","nEla":119,"nMath":119,"ela":0.479,"math":0.672,"z":0.329,"lo":322,"hi":510},
+{"rank":409,"dbn":"09X443","name":"THE FAMILY SCHOOL","borough":"Bronx","nEla":163,"nMath":164,"ela":0.454,"math":0.695,"z":0.32,"lo":325,"hi":485},
+{"rank":410,"dbn":"30Q070","name":"P.S. 070","borough":"Queens","nEla":326,"nMath":331,"ela":0.506,"math":0.631,"z":0.306,"lo":368,"hi":455},
+{"rank":411,"dbn":"08X371","name":"URBAN INSTITUTE OF MATHEMATICS","borough":"Bronx","nEla":345,"nMath":338,"ela":0.58,"math":0.55,"z":0.306,"lo":352,"hi":451},
+{"rank":412,"dbn":"14K582","name":"M.S. 582","borough":"Brooklyn","nEla":333,"nMath":215,"ela":0.526,"math":0.609,"z":0.303,"lo":373,"hi":479},
+{"rank":413,"dbn":"27Q202","name":"J.H.S. 202 ROBERT H. GODDARD","borough":"Queens","nEla":820,"nMath":727,"ela":0.585,"math":0.541,"z":0.299,"lo":374,"hi":447},
+{"rank":414,"dbn":"21K215","name":"P.S. 215 MORRIS H. WEISS","borough":"Brooklyn","nEla":294,"nMath":297,"ela":0.483,"math":0.653,"z":0.296,"lo":363,"hi":463},
+{"rank":415,"dbn":"17K354","name":"THE SCHOOL OF INTEGRATED LEARNING","borough":"Brooklyn","nEla":190,"nMath":186,"ela":0.574,"math":0.554,"z":0.295,"lo":358,"hi":482},
+{"rank":416,"dbn":"04M825","name":"ISAAC NEWTON MIDDLE SCHOOL FOR MATH & SCIENCE","borough":"Manhattan","nEla":210,"nMath":130,"ela":0.529,"math":0.6,"z":0.287,"lo":346,"hi":489},
+{"rank":417,"dbn":"10X207","name":"P.S. 207","borough":"Bronx","nEla":132,"nMath":138,"ela":0.508,"math":0.623,"z":0.286,"lo":361,"hi":501},
+{"rank":418,"dbn":"21K968","name":"MIDDLE SCHOOL OF INNOVATION","borough":"Brooklyn","nEla":60,"nMath":62,"ela":0.517,"math":0.613,"z":0.279,"lo":298,"hi":536},
+{"rank":419,"dbn":"22K139","name":"P.S. 139 ALEXINE A. FENTY","borough":"Brooklyn","nEla":280,"nMath":284,"ela":0.536,"math":0.585,"z":0.269,"lo":371,"hi":485},
+{"rank":420,"dbn":"28Q349","name":"THE QUEENS SCHOOL FOR LEADERSHIP AND EXCELLENCE","borough":"Queens","nEla":241,"nMath":242,"ela":0.506,"math":0.616,"z":0.266,"lo":371,"hi":478},
+{"rank":421,"dbn":"23K392","name":"I.S. 392","borough":"Brooklyn","nEla":288,"nMath":198,"ela":0.628,"math":0.48,"z":0.265,"lo":361,"hi":482},
+{"rank":422,"dbn":"17K092","name":"P.S. 092 ADRIAN HEGEMAN","borough":"Brooklyn","nEla":104,"nMath":105,"ela":0.519,"math":0.6,"z":0.259,"lo":330,"hi":517},
+{"rank":423,"dbn":"18K115","name":"P.S. 115 DANIEL MUCATEL SCHOOL","borough":"Brooklyn","nEla":301,"nMath":292,"ela":0.445,"math":0.678,"z":0.254,"lo":383,"hi":483},
+{"rank":424,"dbn":"11X529","name":"ONE WORLD MIDDLE SCHOOL AT EDENWALD","borough":"Bronx","nEla":298,"nMath":296,"ela":0.567,"math":0.544,"z":0.254,"lo":374,"hi":491},
+{"rank":425,"dbn":"31R045","name":"P.S. 045 JOHN TYLER","borough":"Staten Island","nEla":338,"nMath":335,"ela":0.497,"math":0.621,"z":0.254,"lo":376,"hi":489},
+{"rank":426,"dbn":"24Q153","name":"P.S. 153 MASPETH ELEM","borough":"Queens","nEla":321,"nMath":329,"ela":0.508,"math":0.608,"z":0.251,"lo":388,"hi":483},
+{"rank":427,"dbn":"17K138","name":"THE DR. JEAN PIERRE-LOUIS SCHOOL OF EXCELLENCE","borough":"Brooklyn","nEla":206,"nMath":204,"ela":0.49,"math":0.627,"z":0.251,"lo":380,"hi":501},
+{"rank":428,"dbn":"13K282","name":"P.S. 282 PARK SLOPE","borough":"Brooklyn","nEla":204,"nMath":206,"ela":0.5,"math":0.617,"z":0.25,"lo":362,"hi":498},
+{"rank":429,"dbn":"21K212","name":"P.S. 212 LADY DEBORAH MOODY","borough":"Brooklyn","nEla":190,"nMath":200,"ela":0.474,"math":0.645,"z":0.249,"lo":370,"hi":489},
+{"rank":430,"dbn":"31R041","name":"THE STEPHANIE A. VIERNO SCHOOL","borough":"Staten Island","nEla":311,"nMath":317,"ela":0.473,"math":0.644,"z":0.243,"lo":377,"hi":476},
+{"rank":431,"dbn":"06M189","name":"P.S. 189","borough":"Manhattan","nEla":141,"nMath":146,"ela":0.39,"math":0.733,"z":0.24,"lo":365,"hi":497},
+{"rank":432,"dbn":"17K382","name":"ACADEMY FOR COLLEGE PREPARATION AND CAREER EXPLORA","borough":"Brooklyn","nEla":84,"nMath":84,"ela":0.571,"math":0.536,"z":0.24,"lo":320,"hi":532},
+{"rank":433,"dbn":"28Q048","name":"DAVID N. DINKINS SCHOOL","borough":"Queens","nEla":152,"nMath":162,"ela":0.507,"math":0.605,"z":0.239,"lo":365,"hi":499},
+{"rank":434,"dbn":"30Q011","name":"P.S. 011 KATHRYN PHELAN","borough":"Queens","nEla":376,"nMath":381,"ela":0.521,"math":0.588,"z":0.238,"lo":381,"hi":476},
+{"rank":435,"dbn":"21K209","name":"P.S. 209 MARGARET MEAD","borough":"Brooklyn","nEla":418,"nMath":411,"ela":0.471,"math":0.642,"z":0.237,"lo":380,"hi":478},
+{"rank":436,"dbn":"30Q152","name":"P.S. 152 GWENDOLINE N. ALLEYNE SCHOOL","borough":"Queens","nEla":246,"nMath":257,"ela":0.488,"math":0.623,"z":0.232,"lo":377,"hi":492},
+{"rank":437,"dbn":"15K448","name":"BROOKLYN COLLABORATIVE STUDIES","borough":"Brooklyn","nEla":77,"nMath":48,"ela":0.597,"math":0.5,"z":0.229,"lo":328,"hi":557},
+{"rank":438,"dbn":"27Q377","name":"S.T.A.R. LEADERSHIP ACADEMY","borough":"Queens","nEla":211,"nMath":211,"ela":0.483,"math":0.626,"z":0.227,"lo":373,"hi":507},
+{"rank":439,"dbn":"31R021","name":"P.S. 21 MARGARET EMERY-ELM PARK","borough":"Staten Island","nEla":132,"nMath":139,"ela":0.508,"math":0.597,"z":0.222,"lo":367,"hi":518},
+{"rank":440,"dbn":"27Q063","name":"P.S. 063 OLD SOUTH","borough":"Queens","nEla":363,"nMath":382,"ela":0.49,"math":0.615,"z":0.221,"lo":393,"hi":496},
+{"rank":441,"dbn":"14K084","name":"P.S. 084 JOSE DE DIEGO","borough":"Brooklyn","nEla":348,"nMath":301,"ela":0.511,"math":0.591,"z":0.219,"lo":394,"hi":499},
+{"rank":442,"dbn":"18K233","name":"P.S. 233 LANGSTON HUGHES","borough":"Brooklyn","nEla":119,"nMath":116,"ela":0.42,"math":0.69,"z":0.214,"lo":337,"hi":512},
+{"rank":443,"dbn":"12X536","name":"P.S. 536","borough":"Bronx","nEla":108,"nMath":113,"ela":0.426,"math":0.681,"z":0.21,"lo":348,"hi":532},
+{"rank":444,"dbn":"25Q252","name":"QUEENS SCHOOL OF INQUIRY, THE","borough":"Queens","nEla":222,"nMath":149,"ela":0.563,"math":0.53,"z":0.209,"lo":385,"hi":514},
+{"rank":445,"dbn":"11X097","name":"P.S. 097 BRONX","borough":"Bronx","nEla":202,"nMath":210,"ela":0.495,"math":0.605,"z":0.207,"lo":377,"hi":504},
+{"rank":446,"dbn":"10X015","name":"P.S. X015 INSTITUTE FOR ENVIRONMENTAL LEARNING","borough":"Bronx","nEla":252,"nMath":256,"ela":0.468,"math":0.629,"z":0.194,"lo":380,"hi":507},
+{"rank":447,"dbn":"23K401","name":"CHRISTOPHER AVENUE COMMUNITY SCHOOL","borough":"Brooklyn","nEla":98,"nMath":94,"ela":0.449,"math":0.649,"z":0.191,"lo":349,"hi":541},
+{"rank":448,"dbn":"11X083","name":"P.S. 083 DONALD HERTZ","borough":"Bronx","nEla":832,"nMath":831,"ela":0.501,"math":0.591,"z":0.19,"lo":421,"hi":481},
+{"rank":449,"dbn":"09X454","name":"SCIENCE AND TECHNOLOGY ACADEMY: A MOTT HALL SCHOOL","borough":"Bronx","nEla":271,"nMath":262,"ela":0.48,"math":0.615,"z":0.189,"lo":390,"hi":500},
+{"rank":450,"dbn":"09X327","name":"COMPREHENSIVE MODEL SCHOOL PROJECT M.S. 327","borough":"Bronx","nEla":272,"nMath":269,"ela":0.452,"math":0.643,"z":0.185,"lo":386,"hi":511},
+{"rank":451,"dbn":"11X175","name":"P.S. 175 CITY ISLAND","borough":"Bronx","nEla":145,"nMath":144,"ela":0.531,"math":0.556,"z":0.182,"lo":385,"hi":525},
+{"rank":452,"dbn":"31R069","name":"P.S. 069 DANIEL D. TOMPKINS","borough":"Staten Island","nEla":341,"nMath":347,"ela":0.484,"math":0.605,"z":0.177,"lo":400,"hi":497},
+{"rank":453,"dbn":"23K156","name":"P.S. 156 WAVERLY","borough":"Brooklyn","nEla":192,"nMath":188,"ela":0.453,"math":0.638,"z":0.176,"lo":400,"hi":521},
+{"rank":454,"dbn":"15K839","name":"M.S. 839","borough":"Brooklyn","nEla":279,"nMath":195,"ela":0.57,"math":0.508,"z":0.172,"lo":388,"hi":515},
+{"rank":455,"dbn":"02M033","name":"P.S. 033 CHELSEA PREP","borough":"Manhattan","nEla":250,"nMath":251,"ela":0.504,"math":0.578,"z":0.164,"lo":391,"hi":510},
+{"rank":456,"dbn":"06M210","name":"P.S./I.S. 210 - TWENTY-FIRST CENTURY ACADEMY FOR C","borough":"Manhattan","nEla":197,"nMath":223,"ela":0.462,"math":0.623,"z":0.163,"lo":397,"hi":532},
+{"rank":457,"dbn":"27Q062","name":"P. S. 62 - CHESTER PARK SCHOOL","borough":"Queens","nEla":367,"nMath":376,"ela":0.501,"math":0.58,"z":0.162,"lo":402,"hi":508},
+{"rank":458,"dbn":"21K303","name":"I.S. 303 HERBERT S. EISENBERG","borough":"Brooklyn","nEla":402,"nMath":401,"ela":0.498,"math":0.584,"z":0.161,"lo":408,"hi":503},
+{"rank":459,"dbn":"23K363","name":"BROWNSVILLE COLLABORATIVE MIDDLE SCHOOL","borough":"Brooklyn","nEla":129,"nMath":70,"ela":0.558,"math":0.514,"z":0.159,"lo":369,"hi":547},
+{"rank":460,"dbn":"26Q178","name":"P.S./ IS 178 HOLLISWOOD","borough":"Queens","nEla":296,"nMath":235,"ela":0.483,"math":0.596,"z":0.151,"lo":402,"hi":516},
+{"rank":461,"dbn":"28Q086","name":"P.S. Q086","borough":"Queens","nEla":290,"nMath":304,"ela":0.434,"math":0.648,"z":0.149,"lo":407,"hi":525},
+{"rank":462,"dbn":"27Q254","name":"P.S. 254 - THE ROSA PARKS SCHOOL","borough":"Queens","nEla":235,"nMath":241,"ela":0.409,"math":0.676,"z":0.148,"lo":406,"hi":521},
+{"rank":463,"dbn":"24Q012","name":"P.S. 012 JAMES B. COLGATE","borough":"Queens","nEla":379,"nMath":389,"ela":0.443,"math":0.638,"z":0.146,"lo":410,"hi":514},
+{"rank":464,"dbn":"26Q266","name":"P.S./I.S. 266","borough":"Queens","nEla":260,"nMath":210,"ela":0.512,"math":0.562,"z":0.145,"lo":394,"hi":517},
+{"rank":465,"dbn":"11X021","name":"P.S. 021 PHILIP H. SHERIDAN","borough":"Bronx","nEla":112,"nMath":108,"ela":0.455,"math":0.62,"z":0.138,"lo":379,"hi":568},
+{"rank":466,"dbn":"20K939","name":"SUNSET SCHOOL OF CULTURAL LEARNING","borough":"Brooklyn","nEla":170,"nMath":173,"ela":0.471,"math":0.601,"z":0.131,"lo":388,"hi":528},
+{"rank":467,"dbn":"20K227","name":"J.H.S. 227 EDWARD B. SHALLOW","borough":"Brooklyn","nEla":1063,"nMath":1050,"ela":0.484,"math":0.58,"z":0.112,"lo":440,"hi":503},
+{"rank":468,"dbn":"09X339","name":"I.S. 339","borough":"Bronx","nEla":140,"nMath":147,"ela":0.471,"math":0.592,"z":0.111,"lo":392,"hi":543},
+{"rank":469,"dbn":"20K112","name":"P.S. 112 LEFFERTS PARK","borough":"Brooklyn","nEla":325,"nMath":334,"ela":0.468,"math":0.593,"z":0.101,"lo":424,"hi":526},
+{"rank":470,"dbn":"03M075","name":"P.S. 075 EMILY DICKINSON","borough":"Manhattan","nEla":199,"nMath":201,"ela":0.467,"math":0.592,"z":0.099,"lo":411,"hi":548},
+{"rank":471,"dbn":"25Q154","name":"P.S. 154 QUEENS","borough":"Queens","nEla":179,"nMath":186,"ela":0.497,"math":0.559,"z":0.099,"lo":394,"hi":551},
+{"rank":472,"dbn":"20K503","name":"P.S. 503: THE SCHOOL OF DISCOVERY","borough":"Brooklyn","nEla":219,"nMath":230,"ela":0.475,"math":0.583,"z":0.096,"lo":419,"hi":548},
+{"rank":473,"dbn":"27Q319","name":"VILLAGE ACADEMY","borough":"Queens","nEla":325,"nMath":293,"ela":0.462,"math":0.597,"z":0.095,"lo":425,"hi":536},
+{"rank":474,"dbn":"31R072","name":"I.S. 072 ROCCO LAURIE","borough":"Staten Island","nEla":1352,"nMath":1205,"ela":0.547,"math":0.501,"z":0.09,"lo":457,"hi":513},
+{"rank":475,"dbn":"19K938","name":"P.S. 938","borough":"Brooklyn","nEla":116,"nMath":119,"ela":0.509,"math":0.538,"z":0.079,"lo":400,"hi":594},
+{"rank":476,"dbn":"15K094","name":"P.S. 094 THE HENRY LONGFELLOW","borough":"Brooklyn","nEla":390,"nMath":415,"ela":0.372,"math":0.689,"z":0.077,"lo":436,"hi":533},
+{"rank":477,"dbn":"15K261","name":"P.S. 261 ZIPPORIAH MILLS","borough":"Brooklyn","nEla":174,"nMath":175,"ela":0.483,"math":0.566,"z":0.076,"lo":429,"hi":550},
+{"rank":478,"dbn":"31R060","name":"P.S. 060 ALICE AUSTEN","borough":"Staten Island","nEla":233,"nMath":232,"ela":0.459,"math":0.591,"z":0.072,"lo":428,"hi":551},
+{"rank":479,"dbn":"18K066","name":"P.S. 66","borough":"Brooklyn","nEla":297,"nMath":295,"ela":0.444,"math":0.607,"z":0.072,"lo":428,"hi":555},
+{"rank":480,"dbn":"23K323","name":"P.S./I.S. 323","borough":"Brooklyn","nEla":94,"nMath":85,"ela":0.383,"math":0.671,"z":0.069,"lo":387,"hi":588},
+{"rank":481,"dbn":"25Q201","name":"P.S. 201 THE DISCOVERY SCHOOL FOR INQUIRY AND RESE","borough":"Queens","nEla":109,"nMath":111,"ela":0.394,"math":0.658,"z":0.068,"lo":394,"hi":563},
+{"rank":482,"dbn":"28Q358","name":"M.S. 358","borough":"Queens","nEla":324,"nMath":202,"ela":0.522,"math":0.52,"z":0.068,"lo":431,"hi":540},
+{"rank":483,"dbn":"15K230","name":"P.S. 230 DORIS L. COHEN","borough":"Brooklyn","nEla":375,"nMath":383,"ela":0.509,"math":0.533,"z":0.064,"lo":444,"hi":543},
+{"rank":484,"dbn":"22K078","name":"J.H.S. 078 ROY H. MANN","borough":"Brooklyn","nEla":624,"nMath":634,"ela":0.562,"math":0.473,"z":0.061,"lo":451,"hi":530},
+{"rank":485,"dbn":"27Q232","name":"P.S. 232 LINDENWOOD","borough":"Queens","nEla":462,"nMath":381,"ela":0.476,"math":0.567,"z":0.058,"lo":439,"hi":532},
+{"rank":486,"dbn":"30Q010","name":"I.S. 010 HORACE GREELEY","borough":"Queens","nEla":543,"nMath":544,"ela":0.516,"math":0.522,"z":0.054,"lo":446,"hi":534},
+{"rank":487,"dbn":"10X308","name":"BRONX DANCE ACADEMY SCHOOL","borough":"Bronx","nEla":274,"nMath":241,"ela":0.591,"math":0.436,"z":0.048,"lo":440,"hi":561},
+{"rank":488,"dbn":"27Q100","name":"P.S. 100 GLEN MORRIS","borough":"Queens","nEla":258,"nMath":257,"ela":0.407,"math":0.638,"z":0.047,"lo":446,"hi":560},
+{"rank":489,"dbn":"23K284","name":"THE GREGORY JOCKO JACKSON SCHOOL OF SPORTS, ART, A","borough":"Brooklyn","nEla":77,"nMath":79,"ela":0.571,"math":0.456,"z":0.047,"lo":391,"hi":593},
+{"rank":490,"dbn":"10X396","name":"P.S. 396","borough":"Bronx","nEla":91,"nMath":89,"ela":0.462,"math":0.573,"z":0.041,"lo":390,"hi":624},
+{"rank":491,"dbn":"19K661","name":"VISTA ACADEMY","borough":"Brooklyn","nEla":415,"nMath":425,"ela":0.431,"math":0.609,"z":0.041,"lo":446,"hi":547},
+{"rank":492,"dbn":"02M407","name":"INSTITUTE FOR COLLABORATIVE EDUCATION","borough":"Manhattan","nEla":27,"nMath":26,"ela":0.593,"math":0.423,"z":0.039,"lo":349,"hi":656},
+{"rank":493,"dbn":"22K381","name":"I. S. 381","borough":"Brooklyn","nEla":259,"nMath":252,"ela":0.533,"math":0.496,"z":0.038,"lo":438,"hi":567},
+{"rank":494,"dbn":"16K898","name":"THE BROOKLYN GREEN SCHOOL","borough":"Brooklyn","nEla":210,"nMath":208,"ela":0.51,"math":0.519,"z":0.033,"lo":432,"hi":567},
+{"rank":495,"dbn":"06M132","name":"P.S. 132 JUAN PABLO DUARTE","borough":"Manhattan","nEla":96,"nMath":96,"ela":0.458,"math":0.573,"z":0.032,"lo":397,"hi":632},
+{"rank":496,"dbn":"20K223","name":"J.H.S. 223 THE MONTAUK","borough":"Brooklyn","nEla":520,"nMath":535,"ela":0.458,"math":0.576,"z":0.028,"lo":460,"hi":558},
+{"rank":497,"dbn":"15K131","name":"P.S. 131 BROOKLYN","borough":"Brooklyn","nEla":205,"nMath":208,"ela":0.498,"math":0.529,"z":0.024,"lo":429,"hi":564},
+{"rank":498,"dbn":"22K207","name":"P.S. 207 ELIZABETH G. LEARY","borough":"Brooklyn","nEla":556,"nMath":528,"ela":0.495,"math":0.53,"z":0.016,"lo":461,"hi":553},
+{"rank":499,"dbn":"11X089","name":"P.S. 089 BRONX","borough":"Bronx","nEla":606,"nMath":592,"ela":0.47,"math":0.556,"z":0.013,"lo":461,"hi":547},
+{"rank":500,"dbn":"23K446","name":"RIVERDALE AVENUE COMMUNITY SCHOOL","borough":"Brooklyn","nEla":127,"nMath":127,"ela":0.465,"math":0.559,"z":0.012,"lo":425,"hi":602},
+{"rank":501,"dbn":"31R011","name":"P.S. 11 THOMAS DONGAN SCHOOL","borough":"Staten Island","nEla":114,"nMath":114,"ela":0.43,"math":0.596,"z":0.012,"lo":424,"hi":602},
+{"rank":502,"dbn":"11X076","name":"P.S. 076 THE BENNINGTON SCHOOL","borough":"Bronx","nEla":196,"nMath":203,"ela":0.454,"math":0.571,"z":0.011,"lo":435,"hi":590},
+{"rank":503,"dbn":"09X555","name":"MOUNT EDEN CHILDREN'S ACADEMY","borough":"Bronx","nEla":166,"nMath":168,"ela":0.41,"math":0.619,"z":0.01,"lo":422,"hi":593},
+{"rank":504,"dbn":"28Q310","name":"QUEENS COLLEGIATE: A COLLEGE BOARD SCHOOL","borough":"Queens","nEla":233,"nMath":211,"ela":0.506,"math":0.512,"z":0.005,"lo":441,"hi":573},
+{"rank":505,"dbn":"22K198","name":"P.S. 198 BROOKLYN","borough":"Brooklyn","nEla":115,"nMath":118,"ela":0.461,"math":0.559,"z":0.004,"lo":414,"hi":611},
+{"rank":506,"dbn":"02M051","name":"P.S. 051 ELIAS HOWE","borough":"Manhattan","nEla":109,"nMath":112,"ela":0.45,"math":0.571,"z":0.004,"lo":410,"hi":591},
+{"rank":507,"dbn":"26Q031","name":"P.S. 031 BAYSIDE","borough":"Queens","nEla":131,"nMath":138,"ela":0.435,"math":0.587,"z":0.001,"lo":422,"hi":604},
+{"rank":508,"dbn":"24Q290","name":"A.C.E. ACADEMY FOR SCHOLARS AT THE GERALDINE FERRA","borough":"Queens","nEla":252,"nMath":252,"ela":0.468,"math":0.552,"z":-0.001,"lo":438,"hi":578},
+{"rank":509,"dbn":"03M333","name":"P.S. 333 MANHATTAN SCHOOL FOR CHILDREN","borough":"Manhattan","nEla":219,"nMath":177,"ela":0.521,"math":0.492,"z":-0.005,"lo":447,"hi":589},
+{"rank":510,"dbn":"24Q005","name":"I.S. 5 - THE WALTER CROWLEY INTERMEDIATE SCHOOL","borough":"Queens","nEla":1132,"nMath":1011,"ela":0.52,"math":0.494,"z":-0.006,"lo":475,"hi":548},
+{"rank":511,"dbn":"28Q312","name":"JAMAICA CHILDREN'S SCHOOL","borough":"Queens","nEla":85,"nMath":85,"ela":0.494,"math":0.518,"z":-0.006,"lo":400,"hi":611},
+{"rank":512,"dbn":"29Q109","name":"JEAN NUZZI INTERMEDIATE SCHOOL","borough":"Queens","nEla":743,"nMath":753,"ela":0.506,"math":0.509,"z":-0.007,"lo":477,"hi":546},
+{"rank":513,"dbn":"15K169","name":"P.S. 169 SUNSET PARK","borough":"Brooklyn","nEla":309,"nMath":338,"ela":0.356,"math":0.672,"z":-0.01,"lo":471,"hi":560},
+{"rank":514,"dbn":"24Q058","name":"P.S. 58 - THE SCHOOL OF HEROES","borough":"Queens","nEla":355,"nMath":364,"ela":0.459,"math":0.558,"z":-0.012,"lo":464,"hi":570},
+{"rank":515,"dbn":"20K192","name":"P.S. 192 - THE MAGNET SCHOOL FOR MATH AND SCIENCE","borough":"Brooklyn","nEla":379,"nMath":380,"ela":0.462,"math":0.553,"z":-0.018,"lo":464,"hi":567},
+{"rank":516,"dbn":"25Q029","name":"P.S. 029 QUEENS","borough":"Queens","nEla":281,"nMath":288,"ela":0.413,"math":0.604,"z":-0.023,"lo":469,"hi":572},
+{"rank":517,"dbn":"27Q262","name":"CHANNEL VIEW SCHOOL FOR RESEARCH","borough":"Queens","nEla":264,"nMath":166,"ela":0.511,"math":0.494,"z":-0.024,"lo":436,"hi":598},
+{"rank":518,"dbn":"11X106","name":"P.S. 106 PARKCHESTER","borough":"Bronx","nEla":337,"nMath":344,"ela":0.439,"math":0.573,"z":-0.03,"lo":464,"hi":558},
+{"rank":519,"dbn":"24Q088","name":"P.S. 088 SENECA","borough":"Queens","nEla":279,"nMath":287,"ela":0.427,"math":0.585,"z":-0.032,"lo":469,"hi":588},
+{"rank":520,"dbn":"08X071","name":"P.S. 071 ROSE E. SCALA","borough":"Bronx","nEla":696,"nMath":697,"ela":0.473,"math":0.535,"z":-0.034,"lo":493,"hi":554},
+{"rank":521,"dbn":"11X498","name":"P.S./M.S. 11X498 - VAN NEST ACADEMY","borough":"Bronx","nEla":419,"nMath":412,"ela":0.439,"math":0.57,"z":-0.037,"lo":478,"hi":577},
+{"rank":522,"dbn":"03M165","name":"P.S. 165 ROBERT E. SIMON","borough":"Manhattan","nEla":183,"nMath":183,"ela":0.514,"math":0.486,"z":-0.038,"lo":436,"hi":593},
+{"rank":523,"dbn":"29Q059","name":"I.S. 059 SPRINGFIELD GARDENS","borough":"Queens","nEla":357,"nMath":350,"ela":0.479,"math":0.526,"z":-0.038,"lo":465,"hi":579},
+{"rank":524,"dbn":"18K581","name":"THE MIDDLE SCHOOL OF MEDIA, LAW AND FINE ARTS","borough":"Brooklyn","nEla":150,"nMath":150,"ela":0.407,"math":0.6,"z":-0.045,"lo":434,"hi":601},
+{"rank":525,"dbn":"20K030","name":"P.S./I.S. 30 MARY WHITE OVINGTON","borough":"Brooklyn","nEla":557,"nMath":580,"ela":0.46,"math":0.543,"z":-0.05,"lo":483,"hi":575},
+{"rank":526,"dbn":"22K217","name":"P.S. 217 COLONEL DAVID MARCUS SCHOOL","borough":"Brooklyn","nEla":387,"nMath":397,"ela":0.478,"math":0.521,"z":-0.052,"lo":479,"hi":584},
+{"rank":527,"dbn":"21K226","name":"P.S. 226 ALFRED DE B. MASON","borough":"Brooklyn","nEla":498,"nMath":503,"ela":0.45,"math":0.553,"z":-0.052,"lo":476,"hi":576},
+{"rank":528,"dbn":"18K279","name":"P.S. 279 HERMAN SCHREIBER","borough":"Brooklyn","nEla":92,"nMath":91,"ela":0.435,"math":0.56,"z":-0.06,"lo":436,"hi":637},
+{"rank":529,"dbn":"08X072","name":"P.S. 072 DR. WILLIAM DORNEY","borough":"Bronx","nEla":230,"nMath":236,"ela":0.461,"math":0.53,"z":-0.076,"lo":470,"hi":622},
+{"rank":530,"dbn":"29Q136","name":"P.S. 136 ROY WILKINS","borough":"Queens","nEla":154,"nMath":157,"ela":0.455,"math":0.535,"z":-0.076,"lo":438,"hi":629},
+{"rank":531,"dbn":"31R002","name":"I.S. R002 GEORGE L. EGBERT","borough":"Staten Island","nEla":894,"nMath":845,"ela":0.488,"math":0.498,"z":-0.086,"lo":505,"hi":576},
+{"rank":532,"dbn":"08X376","name":"ANTONIA PANTOJA PREPARATORY ACADEMY: A COLLEGE BOA","borough":"Bronx","nEla":122,"nMath":126,"ela":0.459,"math":0.524,"z":-0.089,"lo":445,"hi":624},
+{"rank":533,"dbn":"31R027","name":"I.S. 027 ANNING S. PRALL","borough":"Staten Island","nEla":786,"nMath":770,"ela":0.532,"math":0.447,"z":-0.093,"lo":508,"hi":578},
+{"rank":534,"dbn":"27Q124","name":"P.S. 124 OSMOND A CHURCH","borough":"Queens","nEla":680,"nMath":655,"ela":0.485,"math":0.496,"z":-0.098,"lo":508,"hi":594},
+{"rank":535,"dbn":"21K468","name":"KINGSBOROUGH EARLY COLLEGE SCHOOL","borough":"Brooklyn","nEla":233,"nMath":186,"ela":0.562,"math":0.409,"z":-0.098,"lo":468,"hi":613},
+{"rank":536,"dbn":"08X014","name":"P.S. X014 SENATOR JOHN CALANDRA","borough":"Bronx","nEla":288,"nMath":290,"ela":0.427,"math":0.559,"z":-0.098,"lo":489,"hi":618},
+{"rank":537,"dbn":"25Q020","name":"P.S. 020 JOHN BOWNE","borough":"Queens","nEla":467,"nMath":489,"ela":0.413,"math":0.575,"z":-0.099,"lo":494,"hi":598},
+{"rank":538,"dbn":"10X226","name":"P.S. 226","borough":"Bronx","nEla":135,"nMath":135,"ela":0.437,"math":0.541,"z":-0.108,"lo":455,"hi":648},
+{"rank":539,"dbn":"27Q155","name":"P.S. 155","borough":"Queens","nEla":204,"nMath":208,"ela":0.436,"math":0.543,"z":-0.109,"lo":461,"hi":607},
+{"rank":540,"dbn":"29Q033","name":"P.S. 033 EDWARD M. FUNK","borough":"Queens","nEla":318,"nMath":319,"ela":0.415,"math":0.567,"z":-0.11,"lo":494,"hi":597},
+{"rank":541,"dbn":"25Q189","name":"J.H.S. 189 DANIEL CARTER BEARD","borough":"Queens","nEla":514,"nMath":452,"ela":0.409,"math":0.575,"z":-0.111,"lo":498,"hi":597},
+{"rank":542,"dbn":"25Q120","name":"P.S. 120 QUEENS","borough":"Queens","nEla":363,"nMath":369,"ela":0.383,"math":0.602,"z":-0.114,"lo":500,"hi":613},
+{"rank":543,"dbn":"15K896","name":"THE SCHOOL OF CREATIVITY AND INNOVATION","borough":"Brooklyn","nEla":109,"nMath":118,"ela":0.431,"math":0.542,"z":-0.117,"lo":455,"hi":654},
+{"rank":544,"dbn":"19K224","name":"P.S. 224 HALE A. WOODRUFF","borough":"Brooklyn","nEla":136,"nMath":136,"ela":0.39,"math":0.588,"z":-0.119,"lo":474,"hi":661},
+{"rank":545,"dbn":"29Q156","name":"P.S. 156 LAURELTON","borough":"Queens","nEla":87,"nMath":87,"ela":0.46,"math":0.506,"z":-0.125,"lo":434,"hi":669},
+{"rank":546,"dbn":"06M528","name":"I.S. 528 BEA FULLER RODGERS SCHOOL","borough":"Manhattan","nEla":236,"nMath":238,"ela":0.36,"math":0.613,"z":-0.144,"lo":497,"hi":634},
+{"rank":547,"dbn":"11X178","name":"P.S. 178 - DR. SELMAN WAKSMAN","borough":"Bronx","nEla":128,"nMath":127,"ela":0.406,"math":0.559,"z":-0.145,"lo":483,"hi":669},
+{"rank":548,"dbn":"29Q035","name":"P.S. 035 NATHANIEL WOODHULL","borough":"Queens","nEla":274,"nMath":284,"ela":0.394,"math":0.574,"z":-0.151,"lo":494,"hi":642},
+{"rank":549,"dbn":"12X129","name":"M.S. 129 ACADEMY FOR INDEPENDENT LEARNING AND LEAD","borough":"Bronx","nEla":207,"nMath":209,"ela":0.493,"math":0.464,"z":-0.152,"lo":501,"hi":645},
+{"rank":550,"dbn":"02M002","name":"P.S. 002 MEYER LONDON","borough":"Manhattan","nEla":133,"nMath":135,"ela":0.391,"math":0.57,"z":-0.159,"lo":465,"hi":653},
+{"rank":551,"dbn":"23K137","name":"P.S. 137 RACHEL JEAN MITCHELL","borough":"Brooklyn","nEla":37,"nMath":41,"ela":0.405,"math":0.537,"z":-0.16,"lo":420,"hi":692},
+{"rank":552,"dbn":"06M004","name":"P.S. 004 DUKE ELLINGTON","borough":"Manhattan","nEla":158,"nMath":160,"ela":0.373,"math":0.588,"z":-0.167,"lo":483,"hi":655},
+{"rank":553,"dbn":"10X086","name":"P.S. 086 KINGSBRIDGE HEIGHTS","borough":"Bronx","nEla":340,"nMath":350,"ela":0.385,"math":0.577,"z":-0.169,"lo":505,"hi":630},
+{"rank":554,"dbn":"29Q116","name":"P.S./I.S. 116 WILLIAM C. HUGHLEY","borough":"Queens","nEla":266,"nMath":271,"ela":0.496,"math":0.454,"z":-0.17,"lo":501,"hi":645},
+{"rank":555,"dbn":"07X343","name":"ACADEMY OF APPLIED MATHEMATICS AND TECHNOLOGY","borough":"Bronx","nEla":237,"nMath":214,"ela":0.473,"math":0.477,"z":-0.177,"lo":509,"hi":630},
+{"rank":556,"dbn":"29Q015","name":"P.S. 015 JACKIE ROBINSON","borough":"Queens","nEla":114,"nMath":113,"ela":0.386,"math":0.566,"z":-0.179,"lo":467,"hi":707},
+{"rank":557,"dbn":"08X036","name":"P.S. 036 UNIONPORT","borough":"Bronx","nEla":280,"nMath":287,"ela":0.411,"math":0.544,"z":-0.182,"lo":499,"hi":639},
+{"rank":558,"dbn":"21K238","name":"P.S. 238 ANNE SULLIVAN","borough":"Brooklyn","nEla":308,"nMath":308,"ela":0.464,"math":0.484,"z":-0.185,"lo":517,"hi":643},
+{"rank":559,"dbn":"31R051","name":"I.S. 051 EDWIN MARKHAM","borough":"Staten Island","nEla":967,"nMath":954,"ela":0.442,"math":0.51,"z":-0.186,"lo":536,"hi":623},
+{"rank":560,"dbn":"01M378","name":"SCHOOL FOR GLOBAL LEADERS","borough":"Manhattan","nEla":140,"nMath":134,"ela":0.436,"math":0.507,"z":-0.194,"lo":465,"hi":708},
+{"rank":561,"dbn":"19K345","name":"P.S. 345 PATROLMAN ROBERT BOLDEN","borough":"Brooklyn","nEla":224,"nMath":230,"ela":0.357,"math":0.596,"z":-0.196,"lo":494,"hi":647},
+{"rank":562,"dbn":"17K161","name":"P.S. 161 THE CROWN","borough":"Brooklyn","nEla":133,"nMath":130,"ela":0.406,"math":0.538,"z":-0.197,"lo":490,"hi":657},
+{"rank":563,"dbn":"12X061","name":"P.S. 061 FRANCISCO OLLER","borough":"Bronx","nEla":76,"nMath":78,"ela":0.447,"math":0.487,"z":-0.199,"lo":465,"hi":714},
+{"rank":564,"dbn":"29Q195","name":"P.S. 195 WILLIAM HABERLE","borough":"Queens","nEla":90,"nMath":89,"ela":0.411,"math":0.528,"z":-0.2,"lo":457,"hi":688},
+{"rank":565,"dbn":"21K099","name":"P.S. 099 ISAAC ASIMOV","borough":"Brooklyn","nEla":512,"nMath":519,"ela":0.428,"math":0.518,"z":-0.202,"lo":536,"hi":639},
+{"rank":566,"dbn":"32K145","name":"P.S. 145 ANDREW JACKSON","borough":"Brooklyn","nEla":158,"nMath":157,"ela":0.361,"math":0.586,"z":-0.205,"lo":507,"hi":678},
+{"rank":567,"dbn":"27Q197","name":"P.S. 197 THE OCEAN SCHOOL","borough":"Queens","nEla":163,"nMath":165,"ela":0.374,"math":0.57,"z":-0.21,"lo":504,"hi":687},
+{"rank":568,"dbn":"25Q129","name":"P.S. 129 PATRICIA LARKIN","borough":"Queens","nEla":474,"nMath":479,"ela":0.378,"math":0.57,"z":-0.211,"lo":536,"hi":640},
+{"rank":569,"dbn":"22K109","name":"P.S. 109","borough":"Brooklyn","nEla":352,"nMath":341,"ela":0.486,"math":0.449,"z":-0.214,"lo":522,"hi":656},
+{"rank":570,"dbn":"27Q273","name":"P.S. 273","borough":"Queens","nEla":139,"nMath":138,"ela":0.475,"math":0.457,"z":-0.214,"lo":473,"hi":713},
+{"rank":571,"dbn":"29Q289","name":"QUEENS UNITED MIDDLE SCHOOL","borough":"Queens","nEla":264,"nMath":261,"ela":0.53,"math":0.398,"z":-0.215,"lo":516,"hi":672},
+{"rank":572,"dbn":"03M163","name":"P.S. 163 ALFRED E. SMITH","borough":"Manhattan","nEla":184,"nMath":184,"ela":0.408,"math":0.527,"z":-0.226,"lo":512,"hi":663},
+{"rank":573,"dbn":"16K026","name":"P.S. 026 JESSE OWENS","borough":"Brooklyn","nEla":76,"nMath":77,"ela":0.395,"math":0.532,"z":-0.227,"lo":481,"hi":720},
+{"rank":574,"dbn":"10X159","name":"P.S. 159 LUIS MUNOZ MARIN BILING","borough":"Bronx","nEla":69,"nMath":72,"ela":0.449,"math":0.472,"z":-0.227,"lo":469,"hi":721},
+{"rank":575,"dbn":"07X154","name":"P.S. 154 JONATHAN D. HYATT","borough":"Bronx","nEla":90,"nMath":92,"ela":0.356,"math":0.576,"z":-0.23,"lo":478,"hi":707},
+{"rank":576,"dbn":"17K191","name":"P.S. 191 PAUL ROBESON","borough":"Brooklyn","nEla":45,"nMath":43,"ela":0.489,"math":0.419,"z":-0.231,"lo":442,"hi":755},
+{"rank":577,"dbn":"28Q054","name":"P.S. 054 HILLSIDE","borough":"Queens","nEla":188,"nMath":195,"ela":0.404,"math":0.528,"z":-0.233,"lo":526,"hi":685},
+{"rank":578,"dbn":"21K199","name":"P.S. 199 FREDERICK WACHTEL","borough":"Brooklyn","nEla":191,"nMath":201,"ela":0.382,"math":0.552,"z":-0.234,"lo":515,"hi":684},
+{"rank":579,"dbn":"10X390","name":"M.S. 390","borough":"Bronx","nEla":253,"nMath":158,"ela":0.447,"math":0.481,"z":-0.235,"lo":518,"hi":693},
+{"rank":580,"dbn":"09X128","name":"MOTT HALL III","borough":"Bronx","nEla":241,"nMath":246,"ela":0.452,"math":0.476,"z":-0.236,"lo":525,"hi":692},
+{"rank":581,"dbn":"16K627","name":"BRIGHTER CHOICE COMMUNITY SCHOOL","borough":"Brooklyn","nEla":76,"nMath":81,"ela":0.461,"math":0.457,"z":-0.238,"lo":486,"hi":727},
+{"rank":582,"dbn":"19K159","name":"P.S. 159 ISAAC PITKIN","borough":"Brooklyn","nEla":270,"nMath":291,"ela":0.393,"math":0.54,"z":-0.242,"lo":536,"hi":678},
+{"rank":583,"dbn":"06M368","name":"THE WILLIAM LYNCH SCHOOL","borough":"Manhattan","nEla":187,"nMath":191,"ela":0.396,"math":0.534,"z":-0.242,"lo":518,"hi":679},
+{"rank":584,"dbn":"21K096","name":"I.S. 096 SETH LOW","borough":"Brooklyn","nEla":764,"nMath":683,"ela":0.401,"math":0.533,"z":-0.243,"lo":559,"hi":649},
+{"rank":585,"dbn":"05M670","name":"THURGOOD MARSHALL ACADEMY FOR LEARNING AND SOCIAL","borough":"Manhattan","nEla":116,"nMath":108,"ela":0.431,"math":0.491,"z":-0.244,"lo":507,"hi":712},
+{"rank":586,"dbn":"11X127","name":"J.H.S. 127 THE CASTLE HILL","borough":"Bronx","nEla":738,"nMath":621,"ela":0.489,"math":0.435,"z":-0.244,"lo":566,"hi":651},
+{"rank":587,"dbn":"17K532","name":"NEW BRIDGES ELEMENTARY","borough":"Brooklyn","nEla":133,"nMath":132,"ela":0.451,"math":0.47,"z":-0.245,"lo":501,"hi":688},
+{"rank":588,"dbn":"15K464","name":"PARK SLOPE COLLEGIATE","borough":"Brooklyn","nEla":102,"nMath":86,"ela":0.441,"math":0.477,"z":-0.246,"lo":490,"hi":723},
+{"rank":589,"dbn":"29Q037","name":"CYNTHIA JENKINS SCHOOL","borough":"Queens","nEla":116,"nMath":117,"ela":0.44,"math":0.479,"z":-0.251,"lo":490,"hi":717},
+{"rank":590,"dbn":"28Q206","name":"P.S. 206 THE HORACE HARDING SCHOOL","borough":"Queens","nEla":220,"nMath":219,"ela":0.35,"math":0.58,"z":-0.255,"lo":541,"hi":700},
+{"rank":591,"dbn":"19K760","name":"HIGHLAND PARK COMMUNITY SCHOOL","borough":"Brooklyn","nEla":216,"nMath":217,"ela":0.403,"math":0.521,"z":-0.258,"lo":530,"hi":699},
+{"rank":592,"dbn":"12X383","name":"EMOLIOR ACADEMY","borough":"Bronx","nEla":359,"nMath":310,"ela":0.485,"math":0.432,"z":-0.258,"lo":532,"hi":674},
+{"rank":593,"dbn":"07X005","name":"P.S. 5 PORT MORRIS","borough":"Bronx","nEla":312,"nMath":308,"ela":0.452,"math":0.468,"z":-0.26,"lo":546,"hi":684},
+{"rank":594,"dbn":"14K120","name":"P.S. 120 CARLOS TAPIA","borough":"Brooklyn","nEla":109,"nMath":109,"ela":0.394,"math":0.523,"z":-0.262,"lo":485,"hi":729},
+{"rank":595,"dbn":"29Q134","name":"P.S. 134 HOLLIS","borough":"Queens","nEla":131,"nMath":133,"ela":0.466,"math":0.444,"z":-0.27,"lo":486,"hi":718},
+{"rank":596,"dbn":"17K722","name":"NEW HEIGHTS MIDDLE SCHOOL","borough":"Brooklyn","nEla":195,"nMath":193,"ela":0.513,"math":0.389,"z":-0.285,"lo":531,"hi":726},
+{"rank":597,"dbn":"30Q329","name":"EAST ELMHURST COMMUNITY SCHOOL","borough":"Queens","nEla":201,"nMath":201,"ela":0.418,"math":0.493,"z":-0.286,"lo":529,"hi":720},
+{"rank":598,"dbn":"24Q229","name":"P.S. 229 EMANUEL KAPLAN","borough":"Queens","nEla":508,"nMath":516,"ela":0.384,"math":0.533,"z":-0.288,"lo":568,"hi":672},
+{"rank":599,"dbn":"30Q204","name":"I.S. 204 OLIVER W. HOLMES","borough":"Queens","nEla":260,"nMath":260,"ela":0.408,"math":0.504,"z":-0.289,"lo":556,"hi":688},
+{"rank":600,"dbn":"01M450","name":"EAST SIDE COMMUNITY SCHOOL","borough":"Manhattan","nEla":241,"nMath":227,"ela":0.452,"math":0.454,"z":-0.291,"lo":552,"hi":697},
+{"rank":601,"dbn":"05M133","name":"P.S. 133 FRED R MOORE","borough":"Manhattan","nEla":65,"nMath":64,"ela":0.338,"math":0.562,"z":-0.294,"lo":480,"hi":755},
+{"rank":602,"dbn":"14K023","name":"P.S. 023 CARTER G. WOODSON","borough":"Brooklyn","nEla":79,"nMath":81,"ela":0.405,"math":0.494,"z":-0.294,"lo":494,"hi":730},
+{"rank":603,"dbn":"05M154","name":"P.S. 154 HARRIET TUBMAN","borough":"Manhattan","nEla":54,"nMath":55,"ela":0.333,"math":0.564,"z":-0.294,"lo":450,"hi":769},
+{"rank":604,"dbn":"28Q896","name":"YOUNG WOMEN'S LEADERSHIP SCHOOL, QUEENS","borough":"Queens","nEla":259,"nMath":234,"ela":0.541,"math":0.355,"z":-0.296,"lo":523,"hi":686},
+{"rank":605,"dbn":"31R038","name":"P.S. 038 GEORGE CROMWELL","borough":"Staten Island","nEla":163,"nMath":158,"ela":0.313,"math":0.601,"z":-0.298,"lo":514,"hi":731},
+{"rank":606,"dbn":"12X316","name":"KAPPA III","borough":"Bronx","nEla":242,"nMath":245,"ela":0.442,"math":0.461,"z":-0.301,"lo":555,"hi":709},
+{"rank":607,"dbn":"17K705","name":"BROOKLYN ARTS AND SCIENCE ELEMENTARY SCHOOL","borough":"Brooklyn","nEla":103,"nMath":98,"ela":0.427,"math":0.469,"z":-0.303,"lo":518,"hi":709},
+{"rank":608,"dbn":"14K126","name":"JOHN ERICSSON MIDDLE SCHOOL 126","borough":"Brooklyn","nEla":138,"nMath":132,"ela":0.457,"math":0.439,"z":-0.305,"lo":518,"hi":717},
+{"rank":609,"dbn":"18K235","name":"P.S. 235 JANICE MARIE KNIGHT SCHOOL","borough":"Brooklyn","nEla":263,"nMath":259,"ela":0.403,"math":0.502,"z":-0.307,"lo":555,"hi":716},
+{"rank":610,"dbn":"20K179","name":"P.S. 179 KENSINGTON","borough":"Brooklyn","nEla":305,"nMath":314,"ela":0.364,"math":0.545,"z":-0.31,"lo":567,"hi":729},
+{"rank":611,"dbn":"11X180","name":"M.S. 180 DR. DANIEL HALE WILLIAMS","borough":"Bronx","nEla":638,"nMath":430,"ela":0.487,"math":0.409,"z":-0.312,"lo":568,"hi":680},
+{"rank":612,"dbn":"10X368","name":"IN-TECH ACADEMY (M.S. / HIGH SCHOOL 368)","borough":"Bronx","nEla":412,"nMath":378,"ela":0.507,"math":0.386,"z":-0.314,"lo":566,"hi":702},
+{"rank":613,"dbn":"28Q167","name":"METROPOLITAN EXPEDITIONARY LEARNING SCHOOL","borough":"Queens","nEla":334,"nMath":222,"ela":0.47,"math":0.423,"z":-0.319,"lo":559,"hi":737},
+{"rank":614,"dbn":"17K340","name":"I.S. 340","borough":"Brooklyn","nEla":134,"nMath":134,"ela":0.463,"math":0.425,"z":-0.323,"lo":524,"hi":734},
+{"rank":615,"dbn":"06M178","name":"PROFESSOR JUAN BOSCH PUBLIC SCHOOL","borough":"Manhattan","nEla":109,"nMath":110,"ela":0.367,"math":0.527,"z":-0.324,"lo":503,"hi":752},
+{"rank":616,"dbn":"24Q013","name":"P.S. 013 CLEMENT C. MOORE","borough":"Queens","nEla":336,"nMath":342,"ela":0.378,"math":0.523,"z":-0.326,"lo":576,"hi":704},
+{"rank":617,"dbn":"28Q117","name":"P.S. 117 J. KELD / BRIARWOOD SCHOOL","borough":"Queens","nEla":314,"nMath":319,"ela":0.382,"math":0.517,"z":-0.329,"lo":578,"hi":703},
+{"rank":618,"dbn":"06M278","name":"PAULA HEDBAVNY SCHOOL","borough":"Manhattan","nEla":198,"nMath":189,"ela":0.354,"math":0.545,"z":-0.331,"lo":550,"hi":721},
+{"rank":619,"dbn":"01M839","name":"TOMPKINS SQUARE MIDDLE SCHOOL","borough":"Manhattan","nEla":216,"nMath":205,"ela":0.481,"math":0.405,"z":-0.331,"lo":557,"hi":738},
+{"rank":620,"dbn":"13K527","name":"URBAN ASSEMBLY INSTITUTE OF MATH AND SCIENCE FOR Y","borough":"Brooklyn","nEla":92,"nMath":59,"ela":0.467,"math":0.407,"z":-0.332,"lo":498,"hi":761},
+{"rank":621,"dbn":"02M212","name":"P.S. 212 MIDTOWN WEST","borough":"Manhattan","nEla":111,"nMath":116,"ela":0.396,"math":0.491,"z":-0.335,"lo":521,"hi":762},
+{"rank":622,"dbn":"07X031","name":"P.S./M.S. 031 THE WILLIAM LLOYD GARRISON","borough":"Bronx","nEla":247,"nMath":250,"ela":0.364,"math":0.532,"z":-0.338,"lo":565,"hi":712},
+{"rank":623,"dbn":"01M364","name":"EARTH SCHOOL","borough":"Manhattan","nEla":31,"nMath":33,"ela":0.516,"math":0.333,"z":-0.338,"lo":445,"hi":836},
+{"rank":624,"dbn":"20K971","name":"SCHOOL OF MATH, SCIENCE, AND HEALTHY LIVING","borough":"Brooklyn","nEla":84,"nMath":84,"ela":0.393,"math":0.488,"z":-0.342,"lo":510,"hi":757},
+{"rank":625,"dbn":"29Q270","name":"THE GORDON PARKS SCHOOL","borough":"Queens","nEla":344,"nMath":337,"ela":0.453,"math":0.433,"z":-0.344,"lo":557,"hi":737},
+{"rank":626,"dbn":"27Q064","name":"P.S. 064 JOSEPH P. ADDABBO","borough":"Queens","nEla":216,"nMath":227,"ela":0.347,"math":0.546,"z":-0.347,"lo":564,"hi":724},
+{"rank":627,"dbn":"17K061","name":"M.S. 061 DR. GLADSTONE H. ATWELL","borough":"Brooklyn","nEla":246,"nMath":236,"ela":0.447,"math":0.436,"z":-0.349,"lo":564,"hi":721},
+{"rank":628,"dbn":"30Q145","name":"I.S. 145 JOSEPH PULITZER","borough":"Queens","nEla":1251,"nMath":934,"ela":0.404,"math":0.488,"z":-0.351,"lo":606,"hi":695},
+{"rank":629,"dbn":"17K189","name":"P.S. 189 THE BILINGUAL CENTER","borough":"Brooklyn","nEla":616,"nMath":614,"ela":0.419,"math":0.469,"z":-0.354,"lo":594,"hi":702},
+{"rank":630,"dbn":"30Q076","name":"P.S. 076 WILLIAM HALLET","borough":"Queens","nEla":108,"nMath":110,"ela":0.389,"math":0.491,"z":-0.355,"lo":502,"hi":756},
+{"rank":631,"dbn":"22K203","name":"P.S. 203 FLOYD BENNETT SCHOOL","borough":"Brooklyn","nEla":193,"nMath":194,"ela":0.358,"math":0.531,"z":-0.355,"lo":552,"hi":744},
+{"rank":632,"dbn":"23K150","name":"P.S. 150 CHRISTOPHER","borough":"Brooklyn","nEla":44,"nMath":44,"ela":0.341,"math":0.523,"z":-0.356,"lo":475,"hi":848},
+{"rank":633,"dbn":"09X088","name":"P.S. X088 - S. SILVERSTEIN LITTLE SPARROW SCHOOL","borough":"Bronx","nEla":42,"nMath":42,"ela":0.405,"math":0.452,"z":-0.356,"lo":455,"hi":830},
+{"rank":634,"dbn":"19K214","name":"P.S. 214 MICHAEL FRIEDSAM","borough":"Brooklyn","nEla":288,"nMath":295,"ela":0.358,"math":0.532,"z":-0.358,"lo":569,"hi":710},
+{"rank":635,"dbn":"27Q090","name":"P.S. 090 HORACE MANN","borough":"Queens","nEla":215,"nMath":222,"ela":0.372,"math":0.514,"z":-0.361,"lo":543,"hi":733},
+{"rank":636,"dbn":"20K609","name":"URBAN ASSEMBLY SCHOOL FOR LEADERSHIP AND EMPOWERME","borough":"Brooklyn","nEla":153,"nMath":87,"ela":0.536,"math":0.322,"z":-0.366,"lo":532,"hi":775},
+{"rank":637,"dbn":"01M188","name":"P.S. 188 THE ISLAND SCHOOL","borough":"Manhattan","nEla":230,"nMath":188,"ela":0.339,"math":0.548,"z":-0.366,"lo":565,"hi":742},
+{"rank":638,"dbn":"32K151","name":"P.S. 151 LYNDON B. JOHNSON","borough":"Brooklyn","nEla":114,"nMath":114,"ela":0.368,"math":0.509,"z":-0.367,"lo":520,"hi":724},
+{"rank":639,"dbn":"10X280","name":"P.S./M.S. 280 MOSHOLU PARKWAY","borough":"Bronx","nEla":468,"nMath":474,"ela":0.389,"math":0.496,"z":-0.368,"lo":594,"hi":722},
+{"rank":640,"dbn":"11X194","name":"P.S./M.S. 194","borough":"Bronx","nEla":762,"nMath":736,"ela":0.385,"math":0.501,"z":-0.369,"lo":609,"hi":701},
+{"rank":641,"dbn":"16K681","name":"MADIBA PREP MIDDLE SCHOOL","borough":"Brooklyn","nEla":126,"nMath":125,"ela":0.373,"math":0.504,"z":-0.37,"lo":547,"hi":740},
+{"rank":642,"dbn":"30Q092","name":"P.S. 092 HARRY T. STEWART SR.","borough":"Queens","nEla":355,"nMath":355,"ela":0.304,"math":0.586,"z":-0.373,"lo":573,"hi":746},
+{"rank":643,"dbn":"21K153","name":"P.S. 153 HOMECREST","borough":"Brooklyn","nEla":230,"nMath":233,"ela":0.339,"math":0.545,"z":-0.374,"lo":589,"hi":746},
+{"rank":644,"dbn":"03M415","name":"WADLEIGH SECONDARY SCHOOL FOR THE PERFORMING & VIS","borough":"Manhattan","nEla":40,"nMath":28,"ela":0.6,"math":0.214,"z":-0.374,"lo":426,"hi":795},
+{"rank":645,"dbn":"18K219","name":"P.S. 219 KENNEDY-KING","borough":"Brooklyn","nEla":98,"nMath":98,"ela":0.418,"math":0.449,"z":-0.375,"lo":534,"hi":796},
+{"rank":646,"dbn":"22K245","name":"P.S. 245","borough":"Brooklyn","nEla":94,"nMath":93,"ela":0.404,"math":0.462,"z":-0.378,"lo":531,"hi":794},
+{"rank":647,"dbn":"12X595","name":"P.S. 595","borough":"Bronx","nEla":95,"nMath":98,"ela":0.379,"math":0.49,"z":-0.379,"lo":523,"hi":792},
+{"rank":648,"dbn":"13K054","name":"P.S. 54 THE DETECTIVE RAFAEL RAMOS SCHOOL","borough":"Brooklyn","nEla":39,"nMath":41,"ela":0.359,"math":0.488,"z":-0.382,"lo":477,"hi":819},
+{"rank":649,"dbn":"08X302","name":"M.S. 302 LUISA DESSUS CRUZ","borough":"Bronx","nEla":282,"nMath":289,"ela":0.404,"math":0.471,"z":-0.384,"lo":589,"hi":751},
+{"rank":650,"dbn":"09X324","name":"BRONX EARLY COLLEGE ACADEMY FOR TEACHING & LEARNIN","borough":"Bronx","nEla":64,"nMath":38,"ela":0.516,"math":0.316,"z":-0.387,"lo":511,"hi":785},
+{"rank":651,"dbn":"27Q056","name":"P.S. 056 HARRY EICHLER","borough":"Queens","nEla":262,"nMath":264,"ela":0.42,"math":0.451,"z":-0.39,"lo":587,"hi":739},
+{"rank":652,"dbn":"14K018","name":"P.S. 018 EDWARD BUSH","borough":"Brooklyn","nEla":57,"nMath":58,"ela":0.404,"math":0.448,"z":-0.39,"lo":504,"hi":862},
+{"rank":653,"dbn":"24Q071","name":"P.S. 071 FOREST","borough":"Queens","nEla":175,"nMath":180,"ela":0.377,"math":0.494,"z":-0.391,"lo":552,"hi":746},
+{"rank":654,"dbn":"22K278","name":"J.H.S. 278 MARINE PARK","borough":"Brooklyn","nEla":674,"nMath":560,"ela":0.5,"math":0.364,"z":-0.393,"lo":620,"hi":727},
+{"rank":655,"dbn":"09X457","name":"SHERIDAN ACADEMY FOR YOUNG LEADERS","borough":"Bronx","nEla":138,"nMath":136,"ela":0.268,"math":0.61,"z":-0.393,"lo":555,"hi":790},
+{"rank":656,"dbn":"28Q217","name":"J.H.S. 217 ROBERT A. VAN WYCK","borough":"Queens","nEla":1148,"nMath":781,"ela":0.42,"math":0.453,"z":-0.394,"lo":611,"hi":718},
+{"rank":657,"dbn":"06M324","name":"M.S. 324 - PATRIA MIRABAL","borough":"Manhattan","nEla":153,"nMath":161,"ela":0.307,"math":0.565,"z":-0.402,"lo":556,"hi":736},
+{"rank":658,"dbn":"07X584","name":"I.S. 584","borough":"Bronx","nEla":119,"nMath":121,"ela":0.42,"math":0.438,"z":-0.404,"lo":543,"hi":786},
+{"rank":659,"dbn":"11X121","name":"P.S. 121 THROOP","borough":"Bronx","nEla":268,"nMath":269,"ela":0.414,"math":0.45,"z":-0.408,"lo":580,"hi":740},
+{"rank":660,"dbn":"11X567","name":"LINDEN TREE ELEMENTARY SCHOOL","borough":"Bronx","nEla":122,"nMath":127,"ela":0.393,"math":0.465,"z":-0.411,"lo":566,"hi":778},
+{"rank":661,"dbn":"25Q107","name":"P.S. 107 THOMAS A DOOLEY","borough":"Queens","nEla":340,"nMath":349,"ela":0.415,"math":0.447,"z":-0.417,"lo":602,"hi":745},
+{"rank":662,"dbn":"09X215","name":"KAPPA","borough":"Bronx","nEla":124,"nMath":126,"ela":0.387,"math":0.468,"z":-0.419,"lo":561,"hi":789},
+{"rank":663,"dbn":"07X369","name":"YOUNG LEADERS ELEMENTARY SCHOOL","borough":"Bronx","nEla":80,"nMath":81,"ela":0.3,"math":0.556,"z":-0.42,"lo":527,"hi":801},
+{"rank":664,"dbn":"08X392","name":"BRONX DELTA SCHOOL","borough":"Bronx","nEla":177,"nMath":180,"ela":0.407,"math":0.45,"z":-0.421,"lo":575,"hi":777},
+{"rank":665,"dbn":"31R059","name":"THE HARBOR VIEW SCHOOL","borough":"Staten Island","nEla":83,"nMath":82,"ela":0.373,"math":0.476,"z":-0.422,"lo":531,"hi":817},
+{"rank":666,"dbn":"27Q065","name":"P.S. 65 - THE RAYMOND YORK ELEMENTARY SCHOOL","borough":"Queens","nEla":164,"nMath":167,"ela":0.39,"math":0.467,"z":-0.422,"lo":553,"hi":780},
+{"rank":667,"dbn":"30Q149","name":"P.S. 149 CHRISTA MCAULIFFE","borough":"Queens","nEla":365,"nMath":367,"ela":0.332,"math":0.537,"z":-0.422,"lo":601,"hi":749},
+{"rank":668,"dbn":"28Q008","name":"J.H.S. 008 RICHARD S. GROSSLEY","borough":"Queens","nEla":330,"nMath":339,"ela":0.403,"math":0.457,"z":-0.423,"lo":602,"hi":749},
+{"rank":669,"dbn":"29Q356","name":"COMMUNITY VOICES MIDDLE SCHOOL","borough":"Queens","nEla":233,"nMath":218,"ela":0.476,"math":0.372,"z":-0.43,"lo":587,"hi":785},
+{"rank":670,"dbn":"11X144","name":"J.H.S. 144 MICHELANGELO","borough":"Bronx","nEla":357,"nMath":221,"ela":0.42,"math":0.434,"z":-0.43,"lo":587,"hi":754},
+{"rank":671,"dbn":"31R084","name":"THE WAVERLY ACADEMY OF EMPOWERED LEARNERS","borough":"Staten Island","nEla":40,"nMath":38,"ela":0.35,"math":0.474,"z":-0.434,"lo":494,"hi":858},
+{"rank":672,"dbn":"28Q332","name":"REDWOOD MIDDLE SCHOOL","borough":"Queens","nEla":225,"nMath":124,"ela":0.449,"math":0.395,"z":-0.437,"lo":567,"hi":786},
+{"rank":673,"dbn":"20K062","name":"J.H.S. 062 DITMAS","borough":"Brooklyn","nEla":791,"nMath":743,"ela":0.444,"math":0.409,"z":-0.438,"lo":627,"hi":741},
+{"rank":674,"dbn":"06M293","name":"CITY COLLEGE MAGNET SCHOOL OF THE ARTS","borough":"Manhattan","nEla":223,"nMath":224,"ela":0.453,"math":0.393,"z":-0.442,"lo":591,"hi":753},
+{"rank":675,"dbn":"06M128","name":"P.S. 128 AUDUBON","borough":"Manhattan","nEla":178,"nMath":188,"ela":0.382,"math":0.468,"z":-0.444,"lo":584,"hi":780},
+{"rank":676,"dbn":"02M116","name":"P.S. 116 MARY LINDLEY MURRAY","borough":"Manhattan","nEla":130,"nMath":138,"ela":0.415,"math":0.428,"z":-0.446,"lo":573,"hi":796},
+{"rank":677,"dbn":"31R019","name":"P.S. 019 THE CURTIS SCHOOL","borough":"Staten Island","nEla":184,"nMath":191,"ela":0.402,"math":0.445,"z":-0.447,"lo":585,"hi":805},
+{"rank":678,"dbn":"05M046","name":"P.S. 046 ARTHUR TAPPAN","borough":"Manhattan","nEla":171,"nMath":172,"ela":0.409,"math":0.436,"z":-0.448,"lo":605,"hi":781},
+{"rank":679,"dbn":"22K052","name":"P.S. 052 SHEEPSHEAD BAY","borough":"Brooklyn","nEla":285,"nMath":284,"ela":0.354,"math":0.5,"z":-0.448,"lo":594,"hi":760},
+{"rank":680,"dbn":"29Q036","name":"P.S. 036 SAINT ALBANS SCHOOL","borough":"Queens","nEla":125,"nMath":127,"ela":0.4,"math":0.441,"z":-0.452,"lo":556,"hi":788},
+{"rank":681,"dbn":"05M030","name":"P.S. 030 HERNANDEZ/HUGHES","borough":"Manhattan","nEla":47,"nMath":48,"ela":0.383,"math":0.438,"z":-0.452,"lo":513,"hi":826},
+{"rank":682,"dbn":"31R022","name":"P.S. 022 GRANITEVILLE","borough":"Staten Island","nEla":281,"nMath":287,"ela":0.37,"math":0.481,"z":-0.453,"lo":602,"hi":784},
+{"rank":683,"dbn":"07X043","name":"P.S. 043 JONAS BRONCK","borough":"Bronx","nEla":132,"nMath":134,"ela":0.386,"math":0.455,"z":-0.455,"lo":574,"hi":771},
+{"rank":684,"dbn":"02M111","name":"P.S. 111 ADOLPH S. OCHS","borough":"Manhattan","nEla":133,"nMath":136,"ela":0.406,"math":0.434,"z":-0.456,"lo":567,"hi":798},
+{"rank":685,"dbn":"13K313","name":"DOCK STREET SCHOOL FOR STEAM STUDIES","borough":"Brooklyn","nEla":156,"nMath":133,"ela":0.506,"math":0.323,"z":-0.457,"lo":580,"hi":784},
+{"rank":686,"dbn":"18K366","name":"THE SCIENCE AND MEDICINE MIDDLE SCHOOL","borough":"Brooklyn","nEla":196,"nMath":194,"ela":0.413,"math":0.428,"z":-0.46,"lo":605,"hi":786},
+{"rank":687,"dbn":"24Q125","name":"I.S. 125 THOM J. MCCANN WOODSIDE","borough":"Queens","nEla":1114,"nMath":1022,"ela":0.429,"math":0.417,"z":-0.462,"lo":657,"hi":743},
+{"rank":688,"dbn":"21K188","name":"P.S. 188 MICHAEL E. BERDY","borough":"Brooklyn","nEla":72,"nMath":80,"ela":0.403,"math":0.425,"z":-0.462,"lo":546,"hi":812},
+{"rank":689,"dbn":"08X093","name":"P.S. 093 ALBERT G. OLIVER","borough":"Bronx","nEla":111,"nMath":111,"ela":0.261,"math":0.586,"z":-0.464,"lo":584,"hi":809},
+{"rank":690,"dbn":"03M145","name":"P.S. 145, THE BLOOMINGDALE SCHOOL","borough":"Manhattan","nEla":177,"nMath":176,"ela":0.345,"math":0.5,"z":-0.466,"lo":596,"hi":805},
+{"rank":691,"dbn":"24Q305","name":"LEARNERS AND LEADERS","borough":"Queens","nEla":156,"nMath":156,"ela":0.353,"math":0.487,"z":-0.473,"lo":580,"hi":799},
+{"rank":692,"dbn":"27Q226","name":"J.H.S. 226 VIRGIL I. GRISSOM","borough":"Queens","nEla":811,"nMath":745,"ela":0.413,"math":0.43,"z":-0.473,"lo":636,"hi":754},
+{"rank":693,"dbn":"11X103","name":"P.S. 103 HECTOR FONTANEZ","borough":"Bronx","nEla":230,"nMath":245,"ela":0.348,"math":0.494,"z":-0.479,"lo":615,"hi":801},
+{"rank":694,"dbn":"03M610","name":"YOUNG WOMEN'S LEADERSHIP SCHOOL","borough":"Manhattan","nEla":76,"nMath":56,"ela":0.421,"math":0.393,"z":-0.48,"lo":550,"hi":874},
+{"rank":695,"dbn":"05M318","name":"THURGOOD MARSHALL ACADEMY LOWER SCHOOL","borough":"Manhattan","nEla":71,"nMath":71,"ela":0.423,"math":0.394,"z":-0.481,"lo":543,"hi":835},
+{"rank":696,"dbn":"24Q110","name":"P.S. 110","borough":"Queens","nEla":347,"nMath":351,"ela":0.277,"math":0.573,"z":-0.484,"lo":644,"hi":786},
+{"rank":697,"dbn":"29Q238","name":"I.S. 238 - SUSAN B. ANTHONY ACADEMY","borough":"Queens","nEla":711,"nMath":662,"ela":0.446,"math":0.388,"z":-0.485,"lo":651,"hi":770},
+{"rank":698,"dbn":"19K213","name":"P.S. 213 NEW LOTS","borough":"Brooklyn","nEla":71,"nMath":79,"ela":0.282,"math":0.544,"z":-0.488,"lo":543,"hi":825},
+{"rank":699,"dbn":"08X138","name":"P.S. 138 SAMUEL RANDALL","borough":"Bronx","nEla":198,"nMath":208,"ela":0.394,"math":0.438,"z":-0.49,"lo":621,"hi":816},
+{"rank":700,"dbn":"30Q148","name":"P.S. 148 QUEENS","borough":"Queens","nEla":281,"nMath":293,"ela":0.327,"math":0.512,"z":-0.493,"lo":628,"hi":779},
+{"rank":701,"dbn":"27Q097","name":"P.S. 097 FOREST PARK","borough":"Queens","nEla":256,"nMath":259,"ela":0.32,"math":0.517,"z":-0.497,"lo":628,"hi":822},
+{"rank":702,"dbn":"27Q318","name":"WATERSIDE SCHOOL FOR LEADERSHIP","borough":"Queens","nEla":124,"nMath":123,"ela":0.452,"math":0.366,"z":-0.498,"lo":565,"hi":818},
+{"rank":703,"dbn":"06M209","name":"HAMILTON GRANGE MIDDLE SCHOOL","borough":"Manhattan","nEla":217,"nMath":171,"ela":0.415,"math":0.409,"z":-0.502,"lo":611,"hi":789},
+{"rank":704,"dbn":"10X244","name":"THE NEW SCHOOL FOR LEADERSHIP AND JOURNALISM","borough":"Bronx","nEla":552,"nMath":460,"ela":0.457,"math":0.367,"z":-0.506,"lo":659,"hi":772},
+{"rank":705,"dbn":"03M149","name":"P.S. 149 SOJOURNER TRUTH","borough":"Manhattan","nEla":131,"nMath":147,"ela":0.405,"math":0.415,"z":-0.507,"lo":591,"hi":824},
+{"rank":706,"dbn":"06M152","name":"P.S. 152 DYCKMAN VALLEY","borough":"Manhattan","nEla":187,"nMath":191,"ela":0.332,"math":0.497,"z":-0.51,"lo":608,"hi":818},
+{"rank":707,"dbn":"21K225","name":"P.S. K225 - THE EILEEN E. ZAGLIN","borough":"Brooklyn","nEla":693,"nMath":635,"ela":0.355,"math":0.477,"z":-0.514,"lo":672,"hi":779},
+{"rank":708,"dbn":"29Q268","name":"P.S./I.S. 268","borough":"Queens","nEla":468,"nMath":461,"ela":0.382,"math":0.445,"z":-0.517,"lo":645,"hi":792},
+{"rank":709,"dbn":"27Q306","name":"NEW YORK CITY ACADEMY FOR DISCOVERY","borough":"Queens","nEla":158,"nMath":162,"ela":0.361,"math":0.457,"z":-0.527,"lo":606,"hi":834},
+{"rank":710,"dbn":"08X048","name":"P.S. 048 JOSEPH R. DRAKE","borough":"Bronx","nEla":171,"nMath":179,"ela":0.374,"math":0.441,"z":-0.531,"lo":618,"hi":798},
+{"rank":711,"dbn":"17K398","name":"P.S. 398 WALTER WEAVER","borough":"Brooklyn","nEla":86,"nMath":83,"ela":0.326,"math":0.482,"z":-0.533,"lo":559,"hi":843},
+{"rank":712,"dbn":"22K315","name":"P.S. K315","borough":"Brooklyn","nEla":240,"nMath":239,"ela":0.362,"math":0.456,"z":-0.534,"lo":634,"hi":812},
+{"rank":713,"dbn":"21K329","name":"P.S. 329 SURFSIDE","borough":"Brooklyn","nEla":121,"nMath":122,"ela":0.314,"math":0.5,"z":-0.537,"lo":600,"hi":827},
+{"rank":714,"dbn":"05M286","name":"URBAN ASSEMBLY ACADEMY FOR FUTURE LEADERS","borough":"Manhattan","nEla":86,"nMath":74,"ela":0.442,"math":0.351,"z":-0.538,"lo":548,"hi":872},
+{"rank":715,"dbn":"02M131","name":"M.S. 131","borough":"Manhattan","nEla":210,"nMath":186,"ela":0.305,"math":0.516,"z":-0.539,"lo":619,"hi":831},
+{"rank":716,"dbn":"28Q050","name":"P.S. 050 TALFOURD LAWN ELEMENTARY SCHOOL","borough":"Queens","nEla":418,"nMath":419,"ela":0.335,"math":0.487,"z":-0.541,"lo":676,"hi":792},
+{"rank":717,"dbn":"01M142","name":"P.S. 142 AMALIA CASTRO","borough":"Manhattan","nEla":107,"nMath":108,"ela":0.327,"math":0.481,"z":-0.542,"lo":585,"hi":863},
+{"rank":718,"dbn":"10X080","name":"J.H.S. 080 THE MOSHOLU PARKWAY","borough":"Bronx","nEla":503,"nMath":512,"ela":0.429,"math":0.383,"z":-0.543,"lo":675,"hi":788},
+{"rank":719,"dbn":"06M328","name":"COMMUNITY MATH & SCIENCE PREP","borough":"Manhattan","nEla":101,"nMath":103,"ela":0.277,"math":0.534,"z":-0.544,"lo":596,"hi":848},
+{"rank":720,"dbn":"08X182","name":"P.S. 182","borough":"Bronx","nEla":155,"nMath":158,"ela":0.355,"math":0.456,"z":-0.545,"lo":610,"hi":827},
+{"rank":721,"dbn":"14K250","name":"P.S. 250 GEORGE H. LINDSAY","borough":"Brooklyn","nEla":92,"nMath":92,"ela":0.315,"math":0.489,"z":-0.547,"lo":597,"hi":837},
+{"rank":722,"dbn":"17K006","name":"NORMA ADAMS CLEMONS ACADEMY","borough":"Brooklyn","nEla":215,"nMath":215,"ela":0.377,"math":0.433,"z":-0.551,"lo":636,"hi":843},
+{"rank":723,"dbn":"06M115","name":"P.S. 115 ALEXANDER HUMBOLDT","borough":"Manhattan","nEla":153,"nMath":163,"ela":0.281,"math":0.534,"z":-0.551,"lo":624,"hi":825},
+{"rank":724,"dbn":"18K068","name":"I.S. 068 ISAAC BILDERSEE","borough":"Brooklyn","nEla":121,"nMath":121,"ela":0.38,"math":0.421,"z":-0.552,"lo":616,"hi":820},
+{"rank":725,"dbn":"29Q327","name":"EAGLE ACADEMY FOR YOUNG MEN III","borough":"Queens","nEla":152,"nMath":90,"ela":0.368,"math":0.433,"z":-0.553,"lo":600,"hi":837},
+{"rank":726,"dbn":"15K146","name":"THE BROOKLYN NEW SCHOOL, P.S. 146","borough":"Brooklyn","nEla":35,"nMath":31,"ela":0.371,"math":0.387,"z":-0.555,"lo":493,"hi":882},
+{"rank":727,"dbn":"09X505","name":"BRONX SCHOOL FOR LAW, GOVERNMENT AND JUSTICE","borough":"Bronx","nEla":214,"nMath":217,"ela":0.379,"math":0.429,"z":-0.556,"lo":630,"hi":833},
+{"rank":728,"dbn":"24Q091","name":"P.S. 091 RICHARD ARKWRIGHT","borough":"Queens","nEla":332,"nMath":334,"ela":0.334,"math":0.479,"z":-0.56,"lo":682,"hi":811},
+{"rank":729,"dbn":"07X179","name":"ACADEMY OF EXPLORATORY ARTS","borough":"Bronx","nEla":64,"nMath":67,"ela":0.312,"math":0.478,"z":-0.56,"lo":563,"hi":864},
+{"rank":730,"dbn":"32K383","name":"J.H.S. 383 PHILIPPA SCHUYLER","borough":"Brooklyn","nEla":555,"nMath":544,"ela":0.409,"math":0.399,"z":-0.56,"lo":688,"hi":796},
+{"rank":731,"dbn":"09X110","name":"P.S. 110 THEODORE SCHOENFELD","borough":"Bronx","nEla":90,"nMath":94,"ela":0.378,"math":0.415,"z":-0.562,"lo":586,"hi":839},
+{"rank":732,"dbn":"31R010","name":"FORT HILL COLLABORATIVE ELEMENTARY SCHOOL","borough":"Staten Island","nEla":67,"nMath":67,"ela":0.284,"math":0.507,"z":-0.566,"lo":566,"hi":854},
+{"rank":733,"dbn":"10X315","name":"P.S. 315 LAB SCHOOL","borough":"Bronx","nEla":130,"nMath":127,"ela":0.415,"math":0.378,"z":-0.567,"lo":623,"hi":826},
+{"rank":734,"dbn":"03M860","name":"FREDERICK DOUGLASS ACADEMY II SECONDARY SCHOOL","borough":"Manhattan","nEla":37,"nMath":24,"ela":0.405,"math":0.333,"z":-0.569,"lo":518,"hi":888},
+{"rank":735,"dbn":"23K664","name":"BROOKLYN ENVIRONMENTAL EXPLORATION SCHOOL (BEES)","borough":"Brooklyn","nEla":107,"nMath":60,"ela":0.355,"math":0.433,"z":-0.57,"lo":572,"hi":827},
+{"rank":736,"dbn":"24Q068","name":"P.S. 068 CAMBRIDGE","borough":"Queens","nEla":185,"nMath":188,"ela":0.341,"math":0.463,"z":-0.571,"lo":626,"hi":827},
+{"rank":737,"dbn":"19K346","name":"P.S. 346 ABE STARK","borough":"Brooklyn","nEla":167,"nMath":165,"ela":0.335,"math":0.467,"z":-0.573,"lo":653,"hi":837},
+{"rank":738,"dbn":"24Q199","name":"P.S. 199 MAURICE A. FITZGERALD","borough":"Queens","nEla":182,"nMath":186,"ela":0.313,"math":0.489,"z":-0.58,"lo":632,"hi":839},
+{"rank":739,"dbn":"18K588","name":"MIDDLE SCHOOL FOR ART AND PHILOSOPHY","borough":"Brooklyn","nEla":130,"nMath":130,"ela":0.369,"math":0.423,"z":-0.58,"lo":628,"hi":837},
+{"rank":740,"dbn":"22K014","name":"J.H.S. 014 SHELL BANK","borough":"Brooklyn","nEla":397,"nMath":403,"ela":0.363,"math":0.439,"z":-0.584,"lo":675,"hi":823},
+{"rank":741,"dbn":"32K377","name":"P.S. 377 ALEJANDRINA B. DE GAUTIER","borough":"Brooklyn","nEla":74,"nMath":75,"ela":0.23,"math":0.56,"z":-0.587,"lo":560,"hi":867},
+{"rank":742,"dbn":"30Q280","name":"PS280Q: HOME OF THE LIONHEARTS","borough":"Queens","nEla":222,"nMath":225,"ela":0.32,"math":0.48,"z":-0.59,"lo":650,"hi":832},
+{"rank":743,"dbn":"29Q135","name":"THE BELLAIRE SCHOOL","borough":"Queens","nEla":286,"nMath":289,"ela":0.339,"math":0.46,"z":-0.591,"lo":661,"hi":840},
+{"rank":744,"dbn":"09X231","name":"EAGLE ACADEMY FOR YOUNG MEN","borough":"Bronx","nEla":85,"nMath":51,"ela":0.412,"math":0.353,"z":-0.595,"lo":565,"hi":870},
+{"rank":745,"dbn":"09X568","name":"YOUNG WOMEN'S LEADERSHIP SCHOOL OF THE BRONX","borough":"Bronx","nEla":175,"nMath":112,"ela":0.411,"math":0.366,"z":-0.607,"lo":631,"hi":868},
+{"rank":746,"dbn":"02M297","name":"M.S. 297","borough":"Manhattan","nEla":209,"nMath":186,"ela":0.416,"math":0.366,"z":-0.608,"lo":656,"hi":853},
+{"rank":747,"dbn":"11X326","name":"BRONX GREEN MIDDLE SCHOOL","borough":"Bronx","nEla":286,"nMath":181,"ela":0.402,"math":0.381,"z":-0.61,"lo":650,"hi":829},
+{"rank":748,"dbn":"10X306","name":"P.S. 306","borough":"Bronx","nEla":177,"nMath":183,"ela":0.339,"math":0.448,"z":-0.611,"lo":641,"hi":847},
+{"rank":749,"dbn":"19K409","name":"EAST NEW YORK FAMILY ACADEMY","borough":"Brooklyn","nEla":216,"nMath":140,"ela":0.375,"math":0.407,"z":-0.613,"lo":678,"hi":859},
+{"rank":750,"dbn":"28Q080","name":"PS 80  THE THURGOOD MARSHALL MAGNET SCHOOL OF MULT","borough":"Queens","nEla":135,"nMath":139,"ela":0.356,"math":0.424,"z":-0.616,"lo":665,"hi":883},
+{"rank":751,"dbn":"30Q171","name":"P.S. 171 PETER G. VAN ALST","borough":"Queens","nEla":173,"nMath":175,"ela":0.318,"math":0.469,"z":-0.617,"lo":670,"hi":864},
+{"rank":752,"dbn":"08X146","name":"P.S. 146 EDWARD COLLINS","borough":"Bronx","nEla":138,"nMath":140,"ela":0.312,"math":0.471,"z":-0.619,"lo":643,"hi":844},
+{"rank":753,"dbn":"13K003","name":"P.S. 003 THE BEDFORD VILLAGE","borough":"Brooklyn","nEla":72,"nMath":72,"ela":0.361,"math":0.403,"z":-0.62,"lo":603,"hi":865},
+{"rank":754,"dbn":"09X063","name":"P.S. 063 AUTHOR'S ACADEMY","borough":"Bronx","nEla":160,"nMath":166,"ela":0.331,"math":0.452,"z":-0.62,"lo":659,"hi":880},
+{"rank":755,"dbn":"19K557","name":"BROOKLYN GARDENS ELEMENTARY SCHOOL","borough":"Brooklyn","nEla":140,"nMath":138,"ela":0.35,"math":0.428,"z":-0.624,"lo":637,"hi":866},
+{"rank":756,"dbn":"08X119","name":"THE DR. EMMETT W. BASSETT SCHOOL","borough":"Bronx","nEla":231,"nMath":247,"ela":0.299,"math":0.49,"z":-0.624,"lo":681,"hi":850},
+{"rank":757,"dbn":"13K067","name":"P.S. 067 CHARLES A. DORSEY","borough":"Brooklyn","nEla":59,"nMath":57,"ela":0.254,"math":0.509,"z":-0.626,"lo":591,"hi":914},
+{"rank":758,"dbn":"27Q104","name":"P.S. 104 THE BAYS WATER","borough":"Queens","nEla":214,"nMath":216,"ela":0.313,"math":0.472,"z":-0.627,"lo":679,"hi":852},
+{"rank":759,"dbn":"17K246","name":"M.S. 246 WALT WHITMAN","borough":"Brooklyn","nEla":243,"nMath":241,"ela":0.399,"math":0.378,"z":-0.63,"lo":703,"hi":870},
+{"rank":760,"dbn":"12X190","name":"E.S.M.T- I.S. 190","borough":"Bronx","nEla":175,"nMath":165,"ela":0.303,"math":0.479,"z":-0.632,"lo":678,"hi":870},
+{"rank":761,"dbn":"19K935","name":"M.S. 935","borough":"Brooklyn","nEla":350,"nMath":354,"ela":0.426,"math":0.35,"z":-0.632,"lo":702,"hi":838},
+{"rank":762,"dbn":"04M182","name":"THE BILINGUAL BICULTURAL SCHOOL","borough":"Manhattan","nEla":108,"nMath":109,"ela":0.306,"math":0.468,"z":-0.633,"lo":618,"hi":864},
+{"rank":763,"dbn":"10X447","name":"CRESTON ACADEMY","borough":"Bronx","nEla":406,"nMath":414,"ela":0.404,"math":0.374,"z":-0.634,"lo":703,"hi":848},
+{"rank":764,"dbn":"09X126","name":"P.S. 126 DR MARJORIE H DUNBAR","borough":"Bronx","nEla":162,"nMath":168,"ela":0.302,"math":0.476,"z":-0.638,"lo":688,"hi":878},
+{"rank":765,"dbn":"32K562","name":"EVERGREEN MIDDLE SCHOOL FOR URBAN EXPLORATION","borough":"Brooklyn","nEla":341,"nMath":318,"ela":0.349,"math":0.431,"z":-0.641,"lo":695,"hi":857},
+{"rank":766,"dbn":"04M146","name":"P.S. 146 ANN M. SHORT","borough":"Manhattan","nEla":113,"nMath":115,"ela":0.31,"math":0.461,"z":-0.641,"lo":639,"hi":874},
+{"rank":767,"dbn":"32K123","name":"P.S. 123 SUYDAM","borough":"Brooklyn","nEla":188,"nMath":191,"ela":0.298,"math":0.482,"z":-0.641,"lo":676,"hi":884},
+{"rank":768,"dbn":"14K586","name":"LYONS COMMUNITY SCHOOL","borough":"Brooklyn","nEla":67,"nMath":67,"ela":0.433,"math":0.313,"z":-0.642,"lo":594,"hi":910},
+{"rank":769,"dbn":"28Q220","name":"P.S. 220 EDWARD MANDEL","borough":"Queens","nEla":262,"nMath":270,"ela":0.336,"math":0.441,"z":-0.648,"lo":684,"hi":857},
+{"rank":770,"dbn":"29Q192","name":"I.S. 192 THE LINDEN","borough":"Queens","nEla":352,"nMath":354,"ela":0.415,"math":0.356,"z":-0.648,"lo":704,"hi":846},
+{"rank":771,"dbn":"09X303","name":"I.S. X303 LEADERSHIP & COMMUNITY SERVICE","borough":"Bronx","nEla":269,"nMath":181,"ela":0.413,"math":0.354,"z":-0.649,"lo":672,"hi":867},
+{"rank":772,"dbn":"13K287","name":"P.S. 287 BAILEY K. ASHFORD","borough":"Brooklyn","nEla":43,"nMath":42,"ela":0.372,"math":0.357,"z":-0.651,"lo":563,"hi":913},
+{"rank":773,"dbn":"15K428","name":"GLOBAL INNOVATORS ACADEMY","borough":"Brooklyn","nEla":94,"nMath":95,"ela":0.319,"math":0.442,"z":-0.652,"lo":612,"hi":889},
+{"rank":774,"dbn":"18K135","name":"P.S. 135 SHELDON A. BROOKNER","borough":"Brooklyn","nEla":120,"nMath":122,"ela":0.308,"math":0.459,"z":-0.652,"lo":658,"hi":871},
+{"rank":775,"dbn":"01M015","name":"P.S. 015 ROBERTO CLEMENTE","borough":"Manhattan","nEla":64,"nMath":66,"ela":0.297,"math":0.455,"z":-0.654,"lo":607,"hi":892},
+{"rank":776,"dbn":"03M862","name":"MOTT HALL II","borough":"Manhattan","nEla":333,"nMath":200,"ela":0.432,"math":0.33,"z":-0.656,"lo":698,"hi":870},
+{"rank":777,"dbn":"09X028","name":"P.S. 028 MOUNT HOPE","borough":"Bronx","nEla":256,"nMath":258,"ela":0.289,"math":0.488,"z":-0.657,"lo":699,"hi":880},
+{"rank":778,"dbn":"10X310","name":"P.S. 310 MARBLE HILL","borough":"Bronx","nEla":177,"nMath":181,"ela":0.322,"math":0.448,"z":-0.659,"lo":686,"hi":880},
+{"rank":779,"dbn":"21K128","name":"P.S. 128 BENSONHURST","borough":"Brooklyn","nEla":188,"nMath":191,"ela":0.271,"math":0.503,"z":-0.662,"lo":690,"hi":867},
+{"rank":780,"dbn":"05M161","name":"P.S. 161 PEDRO ALBIZU CAMPOS","borough":"Manhattan","nEla":273,"nMath":237,"ela":0.363,"math":0.405,"z":-0.663,"lo":692,"hi":881},
+{"rank":781,"dbn":"09X361","name":"THE HIGHBRIDGE GREEN SCHOOL","borough":"Bronx","nEla":377,"nMath":350,"ela":0.39,"math":0.377,"z":-0.664,"lo":709,"hi":865},
+{"rank":782,"dbn":"10X020","name":"PS/MS 20 P.O.GEORGE J. WERDANN, III","borough":"Bronx","nEla":551,"nMath":548,"ela":0.345,"math":0.429,"z":-0.665,"lo":719,"hi":847},
+{"rank":783,"dbn":"05M036","name":"P.S. 036 MARGARET DOUGLAS","borough":"Manhattan","nEla":85,"nMath":87,"ela":0.306,"math":0.448,"z":-0.666,"lo":628,"hi":906},
+{"rank":784,"dbn":"11X483","name":"THE MATILDA AVENUE SCHOOL","borough":"Bronx","nEla":93,"nMath":96,"ela":0.28,"math":0.479,"z":-0.666,"lo":625,"hi":913},
+{"rank":785,"dbn":"08X140","name":"P.S. X140 THE EAGLE SCHOOL","borough":"Bronx","nEla":120,"nMath":122,"ela":0.325,"math":0.434,"z":-0.668,"lo":679,"hi":901},
+{"rank":786,"dbn":"32K162","name":"J.H.S. 162 THE WILLOUGHBY","borough":"Brooklyn","nEla":231,"nMath":233,"ela":0.325,"math":0.442,"z":-0.673,"lo":707,"hi":884},
+{"rank":787,"dbn":"17K002","name":"PARKSIDE PREPARATORY ACADEMY","borough":"Brooklyn","nEla":234,"nMath":230,"ela":0.41,"math":0.348,"z":-0.673,"lo":692,"hi":892},
+{"rank":788,"dbn":"19K677","name":"EAST NEW YORK ELEMENTARY SCHOOL OF EXCELLENCE","borough":"Brooklyn","nEla":160,"nMath":151,"ela":0.3,"math":0.464,"z":-0.675,"lo":656,"hi":872},
+{"rank":789,"dbn":"07X157","name":"P.S. 157 GROVE HILL","borough":"Bronx","nEla":139,"nMath":141,"ela":0.353,"math":0.404,"z":-0.675,"lo":664,"hi":888},
+{"rank":790,"dbn":"09X199","name":"P.S. 199X - THE SHAKESPEARE SCHOOL","borough":"Bronx","nEla":144,"nMath":154,"ela":0.312,"math":0.448,"z":-0.677,"lo":670,"hi":881},
+{"rank":791,"dbn":"08X062","name":"P.S. 062 INOCENSIO CASANOVA","borough":"Bronx","nEla":159,"nMath":164,"ela":0.377,"math":0.378,"z":-0.678,"lo":684,"hi":901},
+{"rank":792,"dbn":"07X161","name":"P.S. 161 JUAN PONCE DE LEON SCHOOL","borough":"Bronx","nEla":96,"nMath":94,"ela":0.333,"math":0.415,"z":-0.681,"lo":641,"hi":911},
+{"rank":793,"dbn":"27Q053","name":"M.S. 053 BRIAN PICCOLO","borough":"Queens","nEla":228,"nMath":141,"ela":0.36,"math":0.397,"z":-0.681,"lo":680,"hi":889},
+{"rank":794,"dbn":"29Q355","name":"COLLABORATIVE ARTS MIDDLE SCHOOL","borough":"Queens","nEla":250,"nMath":251,"ela":0.456,"math":0.295,"z":-0.682,"lo":715,"hi":872},
+{"rank":795,"dbn":"07X029","name":"P.S./M.S. 029 MELROSE SCHOOL","borough":"Bronx","nEla":341,"nMath":343,"ela":0.355,"math":0.408,"z":-0.683,"lo":709,"hi":867},
+{"rank":796,"dbn":"19K404","name":"ACADEMY FOR YOUNG WRITERS","borough":"Brooklyn","nEla":99,"nMath":58,"ela":0.465,"math":0.259,"z":-0.684,"lo":616,"hi":886},
+{"rank":797,"dbn":"11X566","name":"PELHAM GARDENS MIDDLE SCHOOL","borough":"Bronx","nEla":290,"nMath":194,"ela":0.445,"math":0.304,"z":-0.685,"lo":689,"hi":869},
+{"rank":798,"dbn":"13K351","name":"THE URBAN ASSEMBLY UNISON SCHOOL","borough":"Brooklyn","nEla":141,"nMath":126,"ela":0.418,"math":0.325,"z":-0.689,"lo":656,"hi":916},
+{"rank":799,"dbn":"04M102","name":"P.S. 102 JACQUES CARTIER","borough":"Manhattan","nEla":72,"nMath":73,"ela":0.403,"math":0.329,"z":-0.689,"lo":623,"hi":933},
+{"rank":800,"dbn":"12X273","name":"FREDERICK DOUGLASS ACADEMY V. MIDDLE SCHOOL","borough":"Bronx","nEla":119,"nMath":119,"ela":0.42,"math":0.319,"z":-0.695,"lo":676,"hi":901},
+{"rank":801,"dbn":"06M173","name":"P.S./I.S. 173 FORT WASHINGTON SCHOOL IN THE HEIGHT","borough":"Manhattan","nEla":273,"nMath":283,"ela":0.297,"math":0.463,"z":-0.702,"lo":718,"hi":886},
+{"rank":802,"dbn":"22K194","name":"P.S. 194 RAOUL WALLENBERG","borough":"Brooklyn","nEla":148,"nMath":162,"ela":0.318,"math":0.432,"z":-0.704,"lo":679,"hi":901},
+{"rank":803,"dbn":"11X111","name":"P.S. 111 SETON FALLS","borough":"Bronx","nEla":149,"nMath":150,"ela":0.315,"math":0.433,"z":-0.706,"lo":695,"hi":897},
+{"rank":804,"dbn":"09X323","name":"BRONX WRITING ACADEMY","borough":"Bronx","nEla":153,"nMath":158,"ela":0.438,"math":0.297,"z":-0.712,"lo":677,"hi":900},
+{"rank":805,"dbn":"10X037","name":"P.S. X037 - MULTIPLE INTELLIGENCE SCHOOL","borough":"Bronx","nEla":315,"nMath":324,"ela":0.346,"math":0.404,"z":-0.716,"lo":741,"hi":877},
+{"rank":806,"dbn":"03M421","name":"WEST PREP ACADEMY","borough":"Manhattan","nEla":161,"nMath":110,"ela":0.398,"math":0.336,"z":-0.716,"lo":696,"hi":905},
+{"rank":807,"dbn":"07X065","name":"P.S. 065 MOTHER HALE ACADEMY","borough":"Bronx","nEla":83,"nMath":89,"ela":0.337,"math":0.393,"z":-0.716,"lo":655,"hi":908},
+{"rank":808,"dbn":"24Q307","name":"PIONEER ACADEMY","borough":"Queens","nEla":323,"nMath":323,"ela":0.26,"math":0.498,"z":-0.717,"lo":739,"hi":890},
+{"rank":809,"dbn":"04M206","name":"P.S. 206 JOSE CELSO BARBOSA","borough":"Manhattan","nEla":317,"nMath":265,"ela":0.341,"math":0.408,"z":-0.721,"lo":732,"hi":886},
+{"rank":810,"dbn":"32K045","name":"P.S./I.S. 045 HORACE E. GREENE","borough":"Brooklyn","nEla":261,"nMath":257,"ela":0.303,"math":0.447,"z":-0.723,"lo":718,"hi":887},
+{"rank":811,"dbn":"12X314","name":"FAIRMONT NEIGHBORHOOD SCHOOL","borough":"Bronx","nEla":100,"nMath":102,"ela":0.33,"math":0.402,"z":-0.725,"lo":677,"hi":910},
+{"rank":812,"dbn":"19K171","name":"I.S. 171 ABRAHAM LINCOLN","borough":"Brooklyn","nEla":251,"nMath":173,"ela":0.375,"math":0.364,"z":-0.727,"lo":717,"hi":891},
+{"rank":813,"dbn":"08X130","name":"P.S. 130 ABRAM STEVENS HEWITT","borough":"Bronx","nEla":117,"nMath":121,"ela":0.291,"math":0.446,"z":-0.73,"lo":697,"hi":906},
+{"rank":814,"dbn":"11X357","name":"YOUNG VOICES ACADEMY OF THE BRONX","borough":"Bronx","nEla":129,"nMath":132,"ela":0.333,"math":0.402,"z":-0.73,"lo":710,"hi":904},
+{"rank":815,"dbn":"19K292","name":"J.H.S. 292 MARGARET S. DOUGLAS","borough":"Brooklyn","nEla":222,"nMath":232,"ela":0.392,"math":0.345,"z":-0.731,"lo":739,"hi":913},
+{"rank":816,"dbn":"21K690","name":"BROOKLYN STUDIO SECONDARY SCHOOL","borough":"Brooklyn","nEla":338,"nMath":305,"ela":0.373,"math":0.367,"z":-0.735,"lo":746,"hi":906},
+{"rank":817,"dbn":"29Q138","name":"P.S./M.S. 138 SUNRISE","borough":"Queens","nEla":369,"nMath":376,"ela":0.371,"math":0.37,"z":-0.736,"lo":735,"hi":892},
+{"rank":818,"dbn":"08X424","name":"BRONX ACADEMY FOR MULTI-MEDIA","borough":"Bronx","nEla":158,"nMath":162,"ela":0.272,"math":0.469,"z":-0.737,"lo":727,"hi":913},
+{"rank":819,"dbn":"10X056","name":"P.S. 056 NORWOOD HEIGHTS","borough":"Bronx","nEla":292,"nMath":295,"ela":0.301,"math":0.444,"z":-0.738,"lo":761,"hi":892},
+{"rank":820,"dbn":"09X449","name":"GRANT AVENUE ELEMENTARY SCHOOL","borough":"Bronx","nEla":159,"nMath":167,"ela":0.34,"math":0.395,"z":-0.738,"lo":697,"hi":903},
+{"rank":821,"dbn":"01M063","name":"THE STAR ACADEMY - P.S.63","borough":"Manhattan","nEla":54,"nMath":55,"ela":0.222,"math":0.491,"z":-0.74,"lo":580,"hi":925},
+{"rank":822,"dbn":"30Q127","name":"P.S. 127 AEROSPACE SCIENCE MAGNET SCHOOL","borough":"Queens","nEla":674,"nMath":688,"ela":0.315,"math":0.433,"z":-0.741,"lo":780,"hi":886},
+{"rank":823,"dbn":"09X035","name":"P.S. 035 FRANZ SIEGEL","borough":"Bronx","nEla":196,"nMath":206,"ela":0.347,"math":0.388,"z":-0.742,"lo":725,"hi":922},
+{"rank":824,"dbn":"13K046","name":"P.S. 046 EDWARD C. BLUM","borough":"Brooklyn","nEla":69,"nMath":66,"ela":0.261,"math":0.455,"z":-0.75,"lo":602,"hi":915},
+{"rank":825,"dbn":"12X531","name":"ARCHER ELEMENTARY SCHOOL","borough":"Bronx","nEla":120,"nMath":122,"ela":0.317,"math":0.41,"z":-0.751,"lo":704,"hi":944},
+{"rank":826,"dbn":"08X100","name":"P.S. 100 ISAAC CLASON","borough":"Bronx","nEla":178,"nMath":182,"ela":0.343,"math":0.385,"z":-0.76,"lo":702,"hi":916},
+{"rank":827,"dbn":"11X105","name":"P.S. 105 SEN ABRAHAM BERNSTEIN","borough":"Bronx","nEla":311,"nMath":293,"ela":0.334,"math":0.399,"z":-0.76,"lo":753,"hi":900},
+{"rank":828,"dbn":"12X242","name":"MOTT HALL V","borough":"Bronx","nEla":286,"nMath":253,"ela":0.385,"math":0.34,"z":-0.767,"lo":750,"hi":920},
+{"rank":829,"dbn":"18K285","name":"I.S. 285 MEYER LEVIN","borough":"Brooklyn","nEla":486,"nMath":415,"ela":0.409,"math":0.316,"z":-0.769,"lo":787,"hi":900},
+{"rank":830,"dbn":"09X218","name":"P.S./I.S. 218 RAFAEL HERNANDEZ DUAL LANGUAGE MAGNE","borough":"Bronx","nEla":537,"nMath":541,"ela":0.359,"math":0.372,"z":-0.77,"lo":776,"hi":892},
+{"rank":831,"dbn":"16K309","name":"P.S. 309 THE GEORGE E. WIBECAN PREPARATORY ACADEMY","borough":"Brooklyn","nEla":46,"nMath":48,"ela":0.37,"math":0.312,"z":-0.77,"lo":622,"hi":933},
+{"rank":832,"dbn":"20K506","name":"P.S. 506: THE SCHOOL OF JOURNALISM & TECHNOLOGY","borough":"Brooklyn","nEla":161,"nMath":164,"ela":0.298,"math":0.427,"z":-0.772,"lo":717,"hi":923},
+{"rank":833,"dbn":"09X232","name":"I.S. 232","borough":"Bronx","nEla":189,"nMath":209,"ela":0.291,"math":0.435,"z":-0.777,"lo":740,"hi":917},
+{"rank":834,"dbn":"03M180","name":"P.S. 180 HUGO NEWMAN","borough":"Manhattan","nEla":122,"nMath":117,"ela":0.344,"math":0.368,"z":-0.78,"lo":669,"hi":950},
+{"rank":835,"dbn":"08X562","name":"PUGSLEY PREPARATORY ACADEMY","borough":"Bronx","nEla":506,"nMath":494,"ela":0.403,"math":0.318,"z":-0.783,"lo":792,"hi":907},
+{"rank":836,"dbn":"19K662","name":"LIBERTY AVENUE MIDDLE SCHOOL","borough":"Brooklyn","nEla":458,"nMath":471,"ela":0.338,"math":0.389,"z":-0.783,"lo":792,"hi":902},
+{"rank":837,"dbn":"22K152","name":"SCHOOL OF SCIENCE & TECHNOLOGY","borough":"Brooklyn","nEla":219,"nMath":222,"ela":0.329,"math":0.392,"z":-0.786,"lo":769,"hi":930},
+{"rank":838,"dbn":"10X118","name":"J.H.S. 118 WILLIAM W. NILES","borough":"Bronx","nEla":419,"nMath":371,"ela":0.458,"math":0.253,"z":-0.788,"lo":779,"hi":912},
+{"rank":839,"dbn":"10X246","name":"P.S. 246 POE CENTER","borough":"Bronx","nEla":232,"nMath":239,"ela":0.315,"math":0.406,"z":-0.792,"lo":748,"hi":921},
+{"rank":840,"dbn":"31R068","name":"PORT RICHMOND SCHOOL FOR VISIONARY LEARNING","borough":"Staten Island","nEla":153,"nMath":158,"ela":0.327,"math":0.386,"z":-0.794,"lo":719,"hi":931},
+{"rank":841,"dbn":"13K256","name":"P.S. 256 BENJAMIN BANNEKER","borough":"Brooklyn","nEla":76,"nMath":78,"ela":0.276,"math":0.423,"z":-0.795,"lo":682,"hi":930},
+{"rank":842,"dbn":"06M005","name":"P.S. 005 ELLEN LURIE","borough":"Manhattan","nEla":125,"nMath":129,"ela":0.264,"math":0.45,"z":-0.797,"lo":727,"hi":927},
+{"rank":843,"dbn":"25Q379","name":"COLLEGE POINT COLLABORATIVE","borough":"Queens","nEla":373,"nMath":329,"ela":0.373,"math":0.343,"z":-0.797,"lo":781,"hi":925},
+{"rank":844,"dbn":"10X340","name":"P.S. 340","borough":"Bronx","nEla":258,"nMath":262,"ela":0.353,"math":0.363,"z":-0.798,"lo":786,"hi":914},
+{"rank":845,"dbn":"24Q089","name":"P.S. 89Q: THE JOSE PERALTA SCHOOL OF DREAMERS","borough":"Queens","nEla":416,"nMath":426,"ela":0.291,"math":0.432,"z":-0.805,"lo":787,"hi":924},
+{"rank":846,"dbn":"08X448","name":"SOUNDVIEW ACADEMY FOR CULTURE AND SCHOLARSHIP","borough":"Bronx","nEla":217,"nMath":218,"ela":0.369,"math":0.339,"z":-0.808,"lo":759,"hi":930},
+{"rank":847,"dbn":"23K155","name":"P.S./ I.S. 155 NICHOLAS HERKIMER","borough":"Brooklyn","nEla":122,"nMath":101,"ela":0.27,"math":0.436,"z":-0.808,"lo":718,"hi":951},
+{"rank":848,"dbn":"09X236","name":"P.S. 236 LANGSTON HUGHES","borough":"Bronx","nEla":121,"nMath":121,"ela":0.322,"math":0.38,"z":-0.809,"lo":694,"hi":959},
+{"rank":849,"dbn":"19K158","name":"P.S. 158 WARWICK","borough":"Brooklyn","nEla":138,"nMath":141,"ela":0.275,"math":0.433,"z":-0.813,"lo":739,"hi":924},
+{"rank":850,"dbn":"10X206","name":"I.S. 206 ANN MERSEREAU","borough":"Bronx","nEla":184,"nMath":207,"ela":0.304,"math":0.406,"z":-0.814,"lo":754,"hi":939},
+{"rank":851,"dbn":"06M319","name":"M.S. 319 - MARIA TERESA","borough":"Manhattan","nEla":170,"nMath":179,"ela":0.294,"math":0.413,"z":-0.819,"lo":758,"hi":924},
+{"rank":852,"dbn":"10X205","name":"P.S. 205 FIORELLO LAGUARDIA","borough":"Bronx","nEla":269,"nMath":271,"ela":0.279,"math":0.435,"z":-0.82,"lo":789,"hi":937},
+{"rank":853,"dbn":"10X331","name":"THE BRONX SCHOOL OF YOUNG LEADERS","borough":"Bronx","nEla":396,"nMath":406,"ela":0.359,"math":0.35,"z":-0.823,"lo":800,"hi":924},
+{"rank":854,"dbn":"09X294","name":"THE WALTON AVENUE SCHOOL","borough":"Bronx","nEla":151,"nMath":151,"ela":0.291,"math":0.411,"z":-0.828,"lo":721,"hi":940},
+{"rank":855,"dbn":"23K327","name":"P.S. 327 DR. ROSE B. ENGLISH","borough":"Brooklyn","nEla":80,"nMath":80,"ela":0.262,"math":0.425,"z":-0.83,"lo":715,"hi":945},
+{"rank":856,"dbn":"10X033","name":"P.S. 033 TIMOTHY DWIGHT","borough":"Bronx","nEla":313,"nMath":326,"ela":0.268,"math":0.442,"z":-0.837,"lo":803,"hi":936},
+{"rank":857,"dbn":"28Q082","name":"P.S. 082 HAMMOND","borough":"Queens","nEla":284,"nMath":291,"ela":0.282,"math":0.426,"z":-0.837,"lo":790,"hi":943},
+{"rank":858,"dbn":"10X085","name":"P.S. 085 GREAT EXPECTATIONS","borough":"Bronx","nEla":276,"nMath":294,"ela":0.315,"math":0.388,"z":-0.841,"lo":766,"hi":935},
+{"rank":859,"dbn":"08X131","name":"J.H.S. 131 ALBERT EINSTEIN","borough":"Bronx","nEla":284,"nMath":283,"ela":0.384,"math":0.311,"z":-0.844,"lo":785,"hi":934},
+{"rank":860,"dbn":"28Q072","name":"CATHERINE & COUNT BASIE MIDDLE SCHOOL 72","borough":"Queens","nEla":292,"nMath":291,"ela":0.37,"math":0.326,"z":-0.845,"lo":770,"hi":938},
+{"rank":861,"dbn":"24Q239","name":"P.S. 239","borough":"Queens","nEla":153,"nMath":158,"ela":0.301,"math":0.392,"z":-0.849,"lo":750,"hi":968},
+{"rank":862,"dbn":"08X367","name":"ARCHIMEDES ACADEMY FOR MATH, SCIENCE AND TECHNOLOG","borough":"Bronx","nEla":198,"nMath":193,"ela":0.364,"math":0.326,"z":-0.851,"lo":756,"hi":934},
+{"rank":863,"dbn":"03M185","name":"THE LOCKE SCHOOL OF ARTS AND ENGINEERING","borough":"Manhattan","nEla":75,"nMath":77,"ela":0.32,"math":0.351,"z":-0.854,"lo":720,"hi":946},
+{"rank":864,"dbn":"16K081","name":"P.S. 081 THADDEUS STEVENS","borough":"Brooklyn","nEla":62,"nMath":64,"ela":0.274,"math":0.391,"z":-0.859,"lo":666,"hi":933},
+{"rank":865,"dbn":"19K202","name":"P.S. 202 ERNEST S. JENKYNS","borough":"Brooklyn","nEla":103,"nMath":106,"ela":0.223,"math":0.462,"z":-0.863,"lo":738,"hi":953},
+{"rank":866,"dbn":"12X318","name":"I.S. X318 MATH, SCIENCE & TECHNOLOGY THROUGH ARTS","borough":"Bronx","nEla":218,"nMath":211,"ela":0.317,"math":0.374,"z":-0.863,"lo":792,"hi":966},
+{"rank":867,"dbn":"07X500","name":"HOSTOS-LINCOLN ACADEMY OF SCIENCE","borough":"Bronx","nEla":138,"nMath":106,"ela":0.449,"math":0.217,"z":-0.864,"lo":745,"hi":946},
+{"rank":868,"dbn":"10X391","name":"THE ANGELO PATRI MIDDLE SCHOOL","borough":"Bronx","nEla":266,"nMath":269,"ela":0.297,"math":0.398,"z":-0.865,"lo":792,"hi":942},
+{"rank":869,"dbn":"31R016","name":"P.S. 016 JOHN J. DRISCOLL","borough":"Staten Island","nEla":154,"nMath":163,"ela":0.305,"math":0.38,"z":-0.867,"lo":759,"hi":967},
+{"rank":870,"dbn":"30Q112","name":"P.S. 112 DUTCH KILLS","borough":"Queens","nEla":173,"nMath":178,"ela":0.272,"math":0.416,"z":-0.875,"lo":780,"hi":960},
+{"rank":871,"dbn":"10X003","name":"P.S. 3 RAUL JULIA MICRO SOCIETY","borough":"Bronx","nEla":202,"nMath":171,"ela":0.332,"math":0.351,"z":-0.875,"lo":778,"hi":960},
+{"rank":872,"dbn":"08X069","name":"P.S. 069 JOURNEY PREP SCHOOL","borough":"Bronx","nEla":202,"nMath":201,"ela":0.312,"math":0.373,"z":-0.877,"lo":790,"hi":945},
+{"rank":873,"dbn":"06M143","name":"J.H.S. 143 ELEANOR ROOSEVELT","borough":"Manhattan","nEla":120,"nMath":137,"ela":0.292,"math":0.387,"z":-0.877,"lo":751,"hi":977},
+{"rank":874,"dbn":"03M241","name":"STEM INSTITUTE OF MANHATTAN","borough":"Manhattan","nEla":59,"nMath":60,"ela":0.271,"math":0.383,"z":-0.878,"lo":709,"hi":1016},
+{"rank":875,"dbn":"11X532","name":"BAYCHESTER MIDDLE SCHOOL","borough":"Bronx","nEla":246,"nMath":219,"ela":0.362,"math":0.32,"z":-0.878,"lo":780,"hi":953},
+{"rank":876,"dbn":"14K016","name":"P.S. 016 LEONARD DUNKLY","borough":"Brooklyn","nEla":62,"nMath":61,"ela":0.306,"math":0.344,"z":-0.884,"lo":690,"hi":983},
+{"rank":877,"dbn":"27Q309","name":"ACADEMY OF MEDICAL TECHNOLOGY: A COLLEGE BOARD SCH","borough":"Queens","nEla":135,"nMath":113,"ela":0.319,"math":0.354,"z":-0.884,"lo":780,"hi":969},
+{"rank":878,"dbn":"07X001","name":"P.S. 001 COURTLANDT SCHOOL","borough":"Bronx","nEla":126,"nMath":125,"ela":0.254,"math":0.424,"z":-0.887,"lo":762,"hi":983},
+{"rank":879,"dbn":"04M375","name":"MOSAIC PREPARATORY ACADEMY","borough":"Manhattan","nEla":83,"nMath":83,"ela":0.277,"math":0.386,"z":-0.89,"lo":723,"hi":970},
+{"rank":880,"dbn":"22K240","name":"ANDRIES HUDDE","borough":"Brooklyn","nEla":310,"nMath":327,"ela":0.323,"math":0.361,"z":-0.891,"lo":837,"hi":961},
+{"rank":881,"dbn":"11X087","name":"P.S. 087 BRONX","borough":"Bronx","nEla":154,"nMath":158,"ela":0.325,"math":0.348,"z":-0.894,"lo":794,"hi":984},
+{"rank":882,"dbn":"08X107","name":"P.S. 107","borough":"Bronx","nEla":176,"nMath":179,"ela":0.267,"math":0.413,"z":-0.894,"lo":774,"hi":964},
+{"rank":883,"dbn":"01M034","name":"P.S. 034 FRANKLIN D. ROOSEVELT","borough":"Manhattan","nEla":111,"nMath":93,"ela":0.27,"math":0.398,"z":-0.895,"lo":732,"hi":990},
+{"rank":884,"dbn":"05M129","name":"P.S. 129 JOHN H. FINLEY","borough":"Manhattan","nEla":72,"nMath":73,"ela":0.319,"math":0.329,"z":-0.904,"lo":744,"hi":986},
+{"rank":885,"dbn":"05M148","name":"EAGLE ACADEMY FOR YOUNG MEN OF HARLEM","borough":"Manhattan","nEla":46,"nMath":25,"ela":0.283,"math":0.32,"z":-0.909,"lo":605,"hi":979},
+{"rank":886,"dbn":"12X150","name":"P.S. 150 CHARLES JAMES FOX","borough":"Bronx","nEla":208,"nMath":214,"ela":0.264,"math":0.411,"z":-0.913,"lo":817,"hi":978},
+{"rank":887,"dbn":"27Q223","name":"P.S. 223 LYNDON B. JOHNSON","borough":"Queens","nEla":215,"nMath":215,"ela":0.279,"math":0.395,"z":-0.914,"lo":803,"hi":986},
+{"rank":888,"dbn":"31R028","name":"THE EAGLE ACADEMY FOR YOUNG MEN OF STATEN ISLAND","borough":"Staten Island","nEla":166,"nMath":159,"ela":0.331,"math":0.333,"z":-0.914,"lo":775,"hi":971},
+{"rank":889,"dbn":"05M175","name":"P.S. 175 HENRY H GARNET","borough":"Manhattan","nEla":119,"nMath":121,"ela":0.244,"math":0.421,"z":-0.917,"lo":768,"hi":985},
+{"rank":890,"dbn":"05M200","name":"P.S. 200- THE JAMES MCCUNE SMITH SCHOOL","borough":"Manhattan","nEla":125,"nMath":125,"ela":0.344,"math":0.312,"z":-0.92,"lo":795,"hi":984},
+{"rank":891,"dbn":"11X112","name":"P.S. 112 BRONXWOOD","borough":"Bronx","nEla":147,"nMath":145,"ela":0.259,"math":0.407,"z":-0.925,"lo":810,"hi":986},
+{"rank":892,"dbn":"06M028","name":"P.S. 028 WRIGHT BROTHERS","borough":"Manhattan","nEla":162,"nMath":169,"ela":0.253,"math":0.414,"z":-0.927,"lo":794,"hi":996},
+{"rank":893,"dbn":"17K181","name":"P.S. 181 BROOKLYN","borough":"Brooklyn","nEla":331,"nMath":334,"ela":0.287,"math":0.386,"z":-0.927,"lo":834,"hi":975},
+{"rank":894,"dbn":"10X386","name":"SCHOOL FOR ENVIRONMENTAL CITIZENSHIP","borough":"Bronx","nEla":237,"nMath":241,"ela":0.291,"math":0.378,"z":-0.928,"lo":825,"hi":984},
+{"rank":895,"dbn":"28Q287","name":"THE EMERSON SCHOOL","borough":"Queens","nEla":243,"nMath":255,"ela":0.37,"math":0.29,"z":-0.931,"lo":818,"hi":967},
+{"rank":896,"dbn":"05M194","name":"P.S. 194 COUNTEE CULLEN","borough":"Manhattan","nEla":69,"nMath":73,"ela":0.232,"math":0.411,"z":-0.931,"lo":759,"hi":998},
+{"rank":897,"dbn":"04M037","name":"RIVER EAST ELEMENTARY","borough":"Manhattan","nEla":90,"nMath":87,"ela":0.278,"math":0.368,"z":-0.936,"lo":741,"hi":977},
+{"rank":898,"dbn":"10X008","name":"P.S. 008 ISAAC VARIAN","borough":"Bronx","nEla":275,"nMath":282,"ela":0.291,"math":0.376,"z":-0.938,"lo":809,"hi":976},
+{"rank":899,"dbn":"13K113","name":"M.S. 113 RONALD EDMONDS LEARNING CENTER","borough":"Brooklyn","nEla":129,"nMath":133,"ela":0.341,"math":0.308,"z":-0.94,"lo":799,"hi":1005},
+{"rank":900,"dbn":"10X342","name":"INTERNATIONAL SCHOOL FOR LIBERAL ARTS","borough":"Bronx","nEla":113,"nMath":110,"ela":0.204,"math":0.455,"z":-0.94,"lo":764,"hi":990},
+{"rank":901,"dbn":"09X219","name":"I.S. 219 NEW VENTURE SCHOOL","borough":"Bronx","nEla":225,"nMath":235,"ela":0.338,"math":0.319,"z":-0.946,"lo":837,"hi":995},
+{"rank":902,"dbn":"32K384","name":"P.S. /I.S. 384 FRANCES E. CARTER","borough":"Brooklyn","nEla":202,"nMath":180,"ela":0.307,"math":0.35,"z":-0.946,"lo":803,"hi":976},
+{"rank":903,"dbn":"23K518","name":"KAPPA V (KNOWLEDGE AND POWER PREPARATORY ACADEMY)","borough":"Brooklyn","nEla":71,"nMath":72,"ela":0.31,"math":0.319,"z":-0.949,"lo":748,"hi":999},
+{"rank":904,"dbn":"06M048","name":"P.S. 048 P.O. MICHAEL J. BUCZEK","borough":"Manhattan","nEla":139,"nMath":146,"ela":0.245,"math":0.411,"z":-0.951,"lo":780,"hi":988},
+{"rank":905,"dbn":"03M247","name":"M.S. M247 DUAL LANGUAGE MIDDLE SCHOOL","borough":"Manhattan","nEla":96,"nMath":66,"ela":0.354,"math":0.273,"z":-0.952,"lo":787,"hi":994},
+{"rank":906,"dbn":"15K821","name":"SUNSET PARK PREP","borough":"Brooklyn","nEla":278,"nMath":210,"ela":0.331,"math":0.324,"z":-0.954,"lo":863,"hi":992},
+{"rank":907,"dbn":"17K012","name":"DR. JACQUELINE PEEK-DAVIS SCHOOL","borough":"Brooklyn","nEla":87,"nMath":84,"ela":0.322,"math":0.31,"z":-0.958,"lo":735,"hi":1001},
+{"rank":908,"dbn":"10X054","name":"P.S./I.S. 54","borough":"Bronx","nEla":122,"nMath":123,"ela":0.287,"math":0.358,"z":-0.96,"lo":812,"hi":1021},
+{"rank":909,"dbn":"32K299","name":"P.S. 299 THOMAS WARREN FIELD","borough":"Brooklyn","nEla":90,"nMath":90,"ela":0.3,"math":0.333,"z":-0.962,"lo":778,"hi":1008},
+{"rank":910,"dbn":"18K211","name":"I.S. 211 JOHN WILSON","borough":"Brooklyn","nEla":149,"nMath":147,"ela":0.315,"math":0.327,"z":-0.97,"lo":808,"hi":1003},
+{"rank":911,"dbn":"13K266","name":"M.S. K266 - PARK PLACE COMMUNITY MIDDLE SCHOOL","borough":"Brooklyn","nEla":66,"nMath":61,"ela":0.288,"math":0.328,"z":-0.973,"lo":757,"hi":1011},
+{"rank":912,"dbn":"31R085","name":"THE YOUNG WOMEN'S LEADERSHIP SCHOOL OF STATEN ISLA","borough":"Staten Island","nEla":141,"nMath":140,"ela":0.383,"math":0.25,"z":-0.974,"lo":797,"hi":998},
+{"rank":913,"dbn":"21K288","name":"P.S. 288 THE SHIRLEY TANYHILL","borough":"Brooklyn","nEla":235,"nMath":222,"ela":0.302,"math":0.347,"z":-0.974,"lo":835,"hi":994},
+{"rank":914,"dbn":"32K349","name":"I.S. 349 MATH, SCIENCE & TECH.","borough":"Brooklyn","nEla":120,"nMath":119,"ela":0.3,"math":0.336,"z":-0.976,"lo":777,"hi":983},
+{"rank":915,"dbn":"12X195","name":"P.S. 195","borough":"Bronx","nEla":317,"nMath":324,"ela":0.221,"math":0.438,"z":-0.979,"lo":859,"hi":987},
+{"rank":916,"dbn":"24Q077","name":"JOSEPH F. QUINN INTERMEDIATE SCHOOL 77","borough":"Queens","nEla":460,"nMath":427,"ela":0.285,"math":0.37,"z":-0.98,"lo":874,"hi":994},
+{"rank":917,"dbn":"19K654","name":"VAN SICLEN COMMUNITY MIDDLE SCHOOL","borough":"Brooklyn","nEla":169,"nMath":174,"ela":0.308,"math":0.333,"z":-0.981,"lo":808,"hi":1010},
+{"rank":918,"dbn":"23K522","name":"MOTT HALL IV","borough":"Brooklyn","nEla":106,"nMath":98,"ela":0.283,"math":0.347,"z":-0.984,"lo":803,"hi":1011},
+{"rank":919,"dbn":"02M422","name":"QUEST TO LEARN","borough":"Manhattan","nEla":95,"nMath":80,"ela":0.4,"math":0.212,"z":-0.986,"lo":748,"hi":1043},
+{"rank":920,"dbn":"10X091","name":"P.S. 091 BRONX","borough":"Bronx","nEla":130,"nMath":136,"ela":0.269,"math":0.368,"z":-0.987,"lo":814,"hi":993},
+{"rank":921,"dbn":"06M008","name":"P.S. 008 LUIS BELLIARD","borough":"Manhattan","nEla":133,"nMath":144,"ela":0.218,"math":0.424,"z":-0.989,"lo":800,"hi":990},
+{"rank":922,"dbn":"10X291","name":"P.S. 291","borough":"Bronx","nEla":138,"nMath":141,"ela":0.261,"math":0.376,"z":-0.992,"lo":839,"hi":1010},
+{"rank":923,"dbn":"12X286","name":"FANNIE LOU HAMER MIDDLE SCHOOL","borough":"Bronx","nEla":217,"nMath":213,"ela":0.341,"math":0.296,"z":-0.993,"lo":841,"hi":1004},
+{"rank":924,"dbn":"12X341","name":"ACCION ACADEMY","borough":"Bronx","nEla":170,"nMath":172,"ela":0.341,"math":0.291,"z":-0.996,"lo":841,"hi":1007},
+{"rank":925,"dbn":"11X016","name":"P.S. 016 WAKEFIELD","borough":"Bronx","nEla":136,"nMath":145,"ela":0.294,"math":0.338,"z":-0.997,"lo":825,"hi":1025},
+{"rank":926,"dbn":"06M153","name":"P.S. 153 ADAM CLAYTON POWELL","borough":"Manhattan","nEla":130,"nMath":138,"ela":0.277,"math":0.355,"z":-0.998,"lo":843,"hi":1007},
+{"rank":927,"dbn":"01M140","name":"P.S. 140 NATHAN STRAUS","borough":"Manhattan","nEla":199,"nMath":182,"ela":0.286,"math":0.352,"z":-0.999,"lo":824,"hi":1001},
+{"rank":928,"dbn":"09X070","name":"P.S. 070 MAX SCHOENFELD","borough":"Bronx","nEla":296,"nMath":309,"ela":0.172,"math":0.482,"z":-1.001,"lo":858,"hi":992},
+{"rank":929,"dbn":"04M108","name":"P.S. 108 ASSEMBLYMAN ANGELO DEL TORO EDUCATIONAL C","borough":"Manhattan","nEla":204,"nMath":209,"ela":0.279,"math":0.359,"z":-1.003,"lo":866,"hi":1016},
+{"rank":930,"dbn":"31R031","name":"P.S. 031 WILLIAM T. DAVIS","borough":"Staten Island","nEla":142,"nMath":137,"ela":0.246,"math":0.387,"z":-1.005,"lo":841,"hi":1015},
+{"rank":931,"dbn":"24Q093","name":"I.S. 093 RIDGEWOOD","borough":"Queens","nEla":806,"nMath":505,"ela":0.309,"math":0.335,"z":-1.008,"lo":887,"hi":985},
+{"rank":932,"dbn":"06M348","name":"WASHINGTON HEIGHTS EXPEDITIONARY LEARNING SCHOOL","borough":"Manhattan","nEla":310,"nMath":306,"ela":0.326,"math":0.31,"z":-1.009,"lo":846,"hi":999},
+{"rank":933,"dbn":"14K614","name":"YOUNG WOMEN'S LEADERSHIP SCHOOL OF BROOKLYN","borough":"Brooklyn","nEla":71,"nMath":47,"ela":0.352,"math":0.234,"z":-1.011,"lo":736,"hi":1026},
+{"rank":934,"dbn":"09X055","name":"P.S. 055 BENJAMIN FRANKLIN","borough":"Bronx","nEla":199,"nMath":201,"ela":0.271,"math":0.363,"z":-1.013,"lo":850,"hi":1000},
+{"rank":935,"dbn":"09X594","name":"NEW PATHWAYS ACADEMY","borough":"Bronx","nEla":169,"nMath":167,"ela":0.325,"math":0.299,"z":-1.017,"lo":851,"hi":1008},
+{"rank":936,"dbn":"09X163","name":"P.S. 163 ARTHUR A. SCHOMBURG","borough":"Bronx","nEla":153,"nMath":155,"ela":0.261,"math":0.368,"z":-1.017,"lo":806,"hi":997},
+{"rank":937,"dbn":"03M258","name":"COMMUNITY ACTION SCHOOL - MS 258","borough":"Manhattan","nEla":130,"nMath":80,"ela":0.346,"math":0.262,"z":-1.017,"lo":786,"hi":1020},
+{"rank":938,"dbn":"08X123","name":"J.H.S. 123 JAMES M. KIERAN","borough":"Bronx","nEla":403,"nMath":409,"ela":0.33,"math":0.303,"z":-1.022,"lo":894,"hi":1000},
+{"rank":939,"dbn":"12X217","name":"SCHOOL OF PERFORMING ARTS","borough":"Bronx","nEla":149,"nMath":149,"ela":0.282,"math":0.342,"z":-1.023,"lo":852,"hi":1024},
+{"rank":940,"dbn":"32K086","name":"P.S. 086 THE IRVINGTON","borough":"Brooklyn","nEla":133,"nMath":135,"ela":0.233,"math":0.393,"z":-1.024,"lo":833,"hi":1003},
+{"rank":941,"dbn":"17K353","name":"THE ACADEMY FOR COLLABORATIVE EXPLORATION","borough":"Brooklyn","nEla":117,"nMath":112,"ela":0.376,"math":0.232,"z":-1.024,"lo":846,"hi":1013},
+{"rank":942,"dbn":"19K452","name":"FREDERICK DOUGLASS ACADEMY VIII MIDDLE SCHOOL","borough":"Brooklyn","nEla":239,"nMath":205,"ela":0.293,"math":0.337,"z":-1.024,"lo":872,"hi":1016},
+{"rank":943,"dbn":"24Q330","name":"HELEN M. MARSHALL SCHOOL","borough":"Queens","nEla":223,"nMath":224,"ela":0.233,"math":0.402,"z":-1.025,"lo":865,"hi":1012},
+{"rank":944,"dbn":"13K093","name":"P.S. 093 WILLIAM H. PRESCOTT","borough":"Brooklyn","nEla":61,"nMath":61,"ela":0.279,"math":0.311,"z":-1.03,"lo":771,"hi":1048},
+{"rank":945,"dbn":"08X467","name":"MOTT HALL COMMUNITY SCHOOL","borough":"Bronx","nEla":225,"nMath":233,"ela":0.311,"math":0.313,"z":-1.034,"lo":874,"hi":1013},
+{"rank":946,"dbn":"22K251","name":"P.S. 251 PAERDEGAT","borough":"Brooklyn","nEla":160,"nMath":157,"ela":0.306,"math":0.312,"z":-1.034,"lo":850,"hi":1018},
+{"rank":947,"dbn":"05M197","name":"P.S. 197 JOHN B. RUSSWURM","borough":"Manhattan","nEla":83,"nMath":85,"ela":0.229,"math":0.376,"z":-1.038,"lo":754,"hi":1027},
+{"rank":948,"dbn":"04M057","name":"JAMES WELDON JOHNSON","borough":"Manhattan","nEla":287,"nMath":289,"ela":0.31,"math":0.315,"z":-1.04,"lo":888,"hi":1011},
+{"rank":949,"dbn":"09X170","name":"P.S. 170","borough":"Bronx","nEla":26,"nMath":27,"ela":0.154,"math":0.37,"z":-1.04,"lo":670,"hi":990},
+{"rank":950,"dbn":"12X267","name":"BRONX LATIN","borough":"Bronx","nEla":153,"nMath":91,"ela":0.359,"math":0.242,"z":-1.041,"lo":808,"hi":1016},
+{"rank":951,"dbn":"06M052","name":"HAROLD O. LEVY SCHOOL","borough":"Manhattan","nEla":102,"nMath":53,"ela":0.206,"math":0.396,"z":-1.046,"lo":752,"hi":1022},
+{"rank":952,"dbn":"04M964","name":"CENTRAL PARK EAST II","borough":"Manhattan","nEla":126,"nMath":125,"ela":0.325,"math":0.28,"z":-1.049,"lo":796,"hi":1019},
+{"rank":953,"dbn":"09X593","name":"SOUTH BRONX INTERNATIONAL MIDDLE SCHOOL","borough":"Bronx","nEla":105,"nMath":114,"ela":0.248,"math":0.36,"z":-1.052,"lo":808,"hi":1029},
+{"rank":954,"dbn":"22K361","name":"P.S. 361 EAST FLATBUSH EARLY CHILDHOOD SCHOOL","borough":"Brooklyn","nEla":111,"nMath":108,"ela":0.27,"math":0.333,"z":-1.056,"lo":797,"hi":1024},
+{"rank":955,"dbn":"09X011","name":"P.S. 011 HIGHBRIDGE","borough":"Bronx","nEla":145,"nMath":144,"ela":0.207,"math":0.41,"z":-1.057,"lo":837,"hi":1019},
+{"rank":956,"dbn":"16K057","name":"WHITELAW REID ACADEMY OF ARTS AND BUSINESS","borough":"Brooklyn","nEla":84,"nMath":81,"ela":0.238,"math":0.358,"z":-1.058,"lo":822,"hi":1033},
+{"rank":957,"dbn":"08X337","name":"THE SCHOOL FOR INQUIRY AND SOCIAL JUSTICE","borough":"Bronx","nEla":316,"nMath":289,"ela":0.335,"math":0.28,"z":-1.058,"lo":912,"hi":1013},
+{"rank":958,"dbn":"29Q147","name":"P.S./M.S. 147 RONALD MCNAIR","borough":"Queens","nEla":283,"nMath":282,"ela":0.35,"math":0.262,"z":-1.061,"lo":891,"hi":1027},
+{"rank":959,"dbn":"10X095","name":"P.S. 095 SHEILA MENCHER","borough":"Bronx","nEla":580,"nMath":543,"ela":0.319,"math":0.302,"z":-1.062,"lo":920,"hi":1008},
+{"rank":960,"dbn":"01M064","name":"P.S. 064 ROBERT SIMON","borough":"Manhattan","nEla":47,"nMath":49,"ela":0.277,"math":0.286,"z":-1.062,"lo":693,"hi":1037},
+{"rank":961,"dbn":"08X152","name":"P.S. 152 EVERGREEN","borough":"Bronx","nEla":278,"nMath":280,"ela":0.248,"math":0.371,"z":-1.068,"lo":903,"hi":1023},
+{"rank":962,"dbn":"07X221","name":"SOUTH BRONX PREPARATORY: A COLLEGE BOARD SCHOOL","borough":"Bronx","nEla":220,"nMath":218,"ela":0.277,"math":0.335,"z":-1.071,"lo":887,"hi":1026},
+{"rank":963,"dbn":"27Q042","name":"P.S./M.S 042 R. VERNAM","borough":"Queens","nEla":370,"nMath":365,"ela":0.265,"math":0.353,"z":-1.075,"lo":920,"hi":1013},
+{"rank":964,"dbn":"19K007","name":"P.S. 007 ABRAHAM LINCOLN","borough":"Brooklyn","nEla":271,"nMath":279,"ela":0.247,"math":0.369,"z":-1.076,"lo":906,"hi":1027},
+{"rank":965,"dbn":"18K272","name":"P.S. 272 CURTIS ESTABROOK","borough":"Brooklyn","nEla":158,"nMath":158,"ela":0.241,"math":0.367,"z":-1.077,"lo":874,"hi":1024},
+{"rank":966,"dbn":"14K071","name":"JUAN MOREL CAMPOS SECONDARY SCHOOL","borough":"Brooklyn","nEla":86,"nMath":51,"ela":0.279,"math":0.294,"z":-1.078,"lo":800,"hi":1029},
+{"rank":967,"dbn":"15K136","name":"I.S. 136 CHARLES O. DEWEY","borough":"Brooklyn","nEla":383,"nMath":230,"ela":0.316,"math":0.291,"z":-1.083,"lo":890,"hi":1032},
+{"rank":968,"dbn":"31R049","name":"I.S. 49 BERTA A. DREYFUS","borough":"Staten Island","nEla":293,"nMath":282,"ela":0.297,"math":0.312,"z":-1.084,"lo":896,"hi":1031},
+{"rank":969,"dbn":"24Q211","name":"ELM TREE ELEMENTARY SCHOOL","borough":"Queens","nEla":400,"nMath":409,"ela":0.22,"math":0.399,"z":-1.088,"lo":925,"hi":1026},
+{"rank":970,"dbn":"10X046","name":"P.S. 046 EDGAR ALLAN POE","borough":"Bronx","nEla":289,"nMath":297,"ela":0.27,"math":0.34,"z":-1.088,"lo":900,"hi":1027},
+{"rank":971,"dbn":"12X271","name":"EAST BRONX ACADEMY FOR THE FUTURE","borough":"Bronx","nEla":208,"nMath":139,"ela":0.322,"math":0.273,"z":-1.089,"lo":875,"hi":1040},
+{"rank":972,"dbn":"09X053","name":"P.S. 053 BASHEER QUISIM","borough":"Bronx","nEla":239,"nMath":245,"ela":0.238,"math":0.367,"z":-1.1,"lo":904,"hi":1027},
+{"rank":973,"dbn":"27Q183","name":"P.S. 183 DR. RICHARD R. GREEN","borough":"Queens","nEla":241,"nMath":239,"ela":0.29,"math":0.31,"z":-1.102,"lo":875,"hi":1033},
+{"rank":974,"dbn":"24Q061","name":"I.S. 061 LEONARDO DA VINCI","borough":"Queens","nEla":1872,"nMath":1759,"ela":0.281,"math":0.331,"z":-1.106,"lo":960,"hi":1010},
+{"rank":975,"dbn":"10X363","name":"ACADEMY FOR PERSONAL LEADERSHIP AND EXCELLENCE","borough":"Bronx","nEla":752,"nMath":764,"ela":0.335,"math":0.268,"z":-1.106,"lo":946,"hi":1015},
+{"rank":976,"dbn":"12X196","name":"P.S. 196","borough":"Bronx","nEla":293,"nMath":298,"ela":0.249,"math":0.356,"z":-1.107,"lo":922,"hi":1028},
+{"rank":977,"dbn":"19K663","name":"SCHOOL OF THE FUTURE BROOKLYN","borough":"Brooklyn","nEla":123,"nMath":129,"ela":0.26,"math":0.326,"z":-1.112,"lo":850,"hi":1026},
+{"rank":978,"dbn":"10X225","name":"THEATRE ARTS PRODUCTION COMPANY SCHOOL","borough":"Bronx","nEla":75,"nMath":51,"ela":0.28,"math":0.275,"z":-1.113,"lo":786,"hi":1032},
+{"rank":979,"dbn":"02M001","name":"P.S. 001 ALFRED E. SMITH","borough":"Manhattan","nEla":106,"nMath":109,"ela":0.255,"math":0.321,"z":-1.126,"lo":876,"hi":1040},
+{"rank":980,"dbn":"15K001","name":"P.S. 001 THE BERGEN","borough":"Brooklyn","nEla":278,"nMath":281,"ela":0.212,"math":0.388,"z":-1.126,"lo":936,"hi":1037},
+{"rank":981,"dbn":"31R061","name":"I.S. 061 WILLIAM A MORRIS","borough":"Staten Island","nEla":748,"nMath":627,"ela":0.344,"math":0.25,"z":-1.127,"lo":956,"hi":1028},
+{"rank":982,"dbn":"08X269","name":"BRONX STUDIO SCHOOL FOR WRITERS AND ARTISTS","borough":"Bronx","nEla":266,"nMath":258,"ela":0.305,"math":0.283,"z":-1.133,"lo":912,"hi":1044},
+{"rank":983,"dbn":"11X078","name":"P.S. 078 ANNE HUTCHINSON","borough":"Bronx","nEla":268,"nMath":278,"ela":0.246,"math":0.345,"z":-1.138,"lo":924,"hi":1045},
+{"rank":984,"dbn":"01M020","name":"P.S. 020 ANNA SILVER","borough":"Manhattan","nEla":122,"nMath":123,"ela":0.287,"math":0.285,"z":-1.14,"lo":882,"hi":1051},
+{"rank":985,"dbn":"08X375","name":"THE BRONX MATHEMATICS PREPARATORY SCHOOL","borough":"Bronx","nEla":216,"nMath":218,"ela":0.306,"math":0.275,"z":-1.143,"lo":905,"hi":1046},
+{"rank":986,"dbn":"06M322","name":"MIDDLE SCHOOL 322","borough":"Manhattan","nEla":162,"nMath":169,"ela":0.222,"math":0.361,"z":-1.144,"lo":902,"hi":1050},
+{"rank":987,"dbn":"06M018","name":"P.S. 018 PARK TERRACE","borough":"Manhattan","nEla":131,"nMath":140,"ela":0.26,"math":0.314,"z":-1.146,"lo":872,"hi":1044},
+{"rank":988,"dbn":"11X189","name":"CORNERSTONE ACADEMY FOR SOCIAL ACTION","borough":"Bronx","nEla":107,"nMath":107,"ela":0.196,"math":0.374,"z":-1.153,"lo":857,"hi":1041},
+{"rank":989,"dbn":"15K516","name":"SUNSET PARK AVENUES ELEMENTARY SCHOOL","borough":"Brooklyn","nEla":139,"nMath":141,"ela":0.266,"math":0.305,"z":-1.154,"lo":893,"hi":1034},
+{"rank":990,"dbn":"19K273","name":"P.S. 273 WORTMAN","borough":"Brooklyn","nEla":131,"nMath":129,"ela":0.244,"math":0.326,"z":-1.157,"lo":884,"hi":1054},
+{"rank":991,"dbn":"11X041","name":"P.S. 041 GUN HILL ROAD","borough":"Bronx","nEla":304,"nMath":313,"ela":0.247,"math":0.339,"z":-1.158,"lo":924,"hi":1041},
+{"rank":992,"dbn":"10X009","name":"P.S. 9 RYER AVENUE ELEMENTARY SCHOOL","borough":"Bronx","nEla":204,"nMath":209,"ela":0.26,"math":0.316,"z":-1.165,"lo":915,"hi":1042},
+{"rank":993,"dbn":"09X022","name":"J.H.S. 022 JORDAN L. MOTT","borough":"Bronx","nEla":231,"nMath":250,"ela":0.316,"math":0.256,"z":-1.166,"lo":917,"hi":1043},
+{"rank":994,"dbn":"31R020","name":"P.S. 020 PORT RICHMOND","borough":"Staten Island","nEla":138,"nMath":142,"ela":0.225,"math":0.345,"z":-1.167,"lo":903,"hi":1058},
+{"rank":995,"dbn":"32K347","name":"I.S. 347 SCHOOL OF HUMANITIES","borough":"Brooklyn","nEla":154,"nMath":156,"ela":0.247,"math":0.321,"z":-1.174,"lo":893,"hi":1059},
+{"rank":996,"dbn":"32K274","name":"P.S. 274 KOSCIUSKO","borough":"Brooklyn","nEla":115,"nMath":118,"ela":0.191,"math":0.373,"z":-1.175,"lo":900,"hi":1049},
+{"rank":997,"dbn":"09X114","name":"P.S. X114 - LUIS LLORENS TORRES SCHOOLS","borough":"Bronx","nEla":169,"nMath":183,"ela":0.26,"math":0.306,"z":-1.18,"lo":930,"hi":1055},
+{"rank":998,"dbn":"07X296","name":"SOUTH BRONX ACADEMY FOR APPLIED MEDIA","borough":"Bronx","nEla":141,"nMath":132,"ela":0.312,"math":0.242,"z":-1.182,"lo":901,"hi":1046},
+{"rank":999,"dbn":"09X644","name":"BRONX DEBATE ACADEMY","borough":"Bronx","nEla":213,"nMath":212,"ela":0.305,"math":0.259,"z":-1.183,"lo":917,"hi":1048},
+{"rank":1000,"dbn":"24Q143","name":"P.S. 143 LOUIS ARMSTRONG","borough":"Queens","nEla":623,"nMath":622,"ela":0.193,"math":0.392,"z":-1.189,"lo":979,"hi":1046},
+{"rank":1001,"dbn":"06M346","name":"COMMUNITY HEALTH ACADEMY OF THE HEIGHTS","borough":"Manhattan","nEla":155,"nMath":128,"ela":0.265,"math":0.289,"z":-1.198,"lo":920,"hi":1057},
+{"rank":1002,"dbn":"07X030","name":"P.S. 030 WILTON","borough":"Bronx","nEla":137,"nMath":137,"ela":0.234,"math":0.321,"z":-1.201,"lo":927,"hi":1060},
+{"rank":1003,"dbn":"31R074","name":"P.S. 74 FUTURE LEADERS ELEMENTARY SCHOOL","borough":"Staten Island","nEla":108,"nMath":111,"ela":0.241,"math":0.306,"z":-1.201,"lo":882,"hi":1057},
+{"rank":1004,"dbn":"31R078","name":"P.S. 78","borough":"Staten Island","nEla":216,"nMath":210,"ela":0.204,"math":0.362,"z":-1.205,"lo":947,"hi":1054},
+{"rank":1005,"dbn":"09X132","name":"P.S. 132 GARRET A. MORGAN","borough":"Bronx","nEla":141,"nMath":146,"ela":0.213,"math":0.342,"z":-1.207,"lo":934,"hi":1050},
+{"rank":1006,"dbn":"07X224","name":"P.S./I.S. 224","borough":"Bronx","nEla":148,"nMath":157,"ela":0.358,"math":0.185,"z":-1.208,"lo":949,"hi":1057},
+{"rank":1007,"dbn":"12X214","name":"P.S. 214","borough":"Bronx","nEla":502,"nMath":501,"ela":0.263,"math":0.305,"z":-1.209,"lo":966,"hi":1042},
+{"rank":1008,"dbn":"11X355","name":"BRONX ALLIANCE MIDDLE SCHOOL","borough":"Bronx","nEla":195,"nMath":117,"ela":0.313,"math":0.231,"z":-1.212,"lo":909,"hi":1060},
+{"rank":1009,"dbn":"11X462","name":"CORNERSTONE ACADEMY FOR SOCIAL ACTION MIDDLE SCHOO","borough":"Bronx","nEla":165,"nMath":162,"ela":0.273,"math":0.278,"z":-1.213,"lo":947,"hi":1061},
+{"rank":1010,"dbn":"31R057","name":"P.S. 057 HUBERT H. HUMPHREY","borough":"Staten Island","nEla":175,"nMath":178,"ela":0.24,"math":0.315,"z":-1.214,"lo":940,"hi":1062},
+{"rank":1011,"dbn":"10X360","name":"P.S. 360","borough":"Bronx","nEla":138,"nMath":142,"ela":0.239,"math":0.31,"z":-1.215,"lo":929,"hi":1057},
+{"rank":1012,"dbn":"19K290","name":"P.S. 290 JUAN MOREL CAMPOS","borough":"Brooklyn","nEla":170,"nMath":177,"ela":0.212,"math":0.345,"z":-1.216,"lo":924,"hi":1054},
+{"rank":1013,"dbn":"05M123","name":"P.S. 123 MAHALIA JACKSON","borough":"Manhattan","nEla":178,"nMath":184,"ela":0.298,"math":0.25,"z":-1.219,"lo":935,"hi":1057},
+{"rank":1014,"dbn":"19K218","name":"J.H.S. 218 JAMES P. SINNOTT","borough":"Brooklyn","nEla":263,"nMath":283,"ela":0.255,"math":0.304,"z":-1.219,"lo":941,"hi":1066},
+{"rank":1015,"dbn":"07X551","name":"THE URBAN ASSEMBLY BRONX ACADEMY OF LETTERS","borough":"Bronx","nEla":80,"nMath":83,"ela":0.288,"math":0.229,"z":-1.237,"lo":876,"hi":1059},
+{"rank":1016,"dbn":"15K024","name":"P.S. 024","borough":"Brooklyn","nEla":206,"nMath":211,"ela":0.252,"math":0.294,"z":-1.241,"lo":955,"hi":1064},
+{"rank":1017,"dbn":"09X229","name":"I.S. 229 ROLAND PATTERSON","borough":"Bronx","nEla":172,"nMath":178,"ela":0.297,"math":0.242,"z":-1.242,"lo":937,"hi":1064},
+{"rank":1018,"dbn":"22K119","name":"P.S. 119 AMERSFORT","borough":"Brooklyn","nEla":184,"nMath":184,"ela":0.239,"math":0.304,"z":-1.245,"lo":966,"hi":1058},
+{"rank":1019,"dbn":"25Q250","name":"I.S. 250 THE ROBERT F. KENNEDY COMMUNITY MIDDLE SC","borough":"Queens","nEla":188,"nMath":172,"ela":0.282,"math":0.256,"z":-1.247,"lo":949,"hi":1060},
+{"rank":1020,"dbn":"32K116","name":"P.S. 116 ELIZABETH L FARRELL","borough":"Brooklyn","nEla":129,"nMath":126,"ela":0.186,"math":0.349,"z":-1.255,"lo":931,"hi":1065},
+{"rank":1021,"dbn":"19K422","name":"SPRING CREEK COMMUNITY SCHOOL","borough":"Brooklyn","nEla":66,"nMath":63,"ela":0.242,"math":0.254,"z":-1.265,"lo":842,"hi":1080},
+{"rank":1022,"dbn":"32K106","name":"P.S. 106 EDWARD EVERETT HALE","borough":"Brooklyn","nEla":142,"nMath":142,"ela":0.169,"math":0.366,"z":-1.266,"lo":934,"hi":1067},
+{"rank":1023,"dbn":"05M499","name":"FREDERICK DOUGLASS ACADEMY","borough":"Manhattan","nEla":121,"nMath":84,"ela":0.339,"math":0.167,"z":-1.268,"lo":927,"hi":1070},
+{"rank":1024,"dbn":"23K184","name":"P.S. 184 NEWPORT","borough":"Brooklyn","nEla":248,"nMath":251,"ela":0.254,"math":0.283,"z":-1.271,"lo":979,"hi":1066},
+{"rank":1025,"dbn":"10X045","name":"THOMAS C. GIORDANO MIDDLE SCHOOL 45","borough":"Bronx","nEla":374,"nMath":375,"ela":0.297,"math":0.24,"z":-1.274,"lo":994,"hi":1063},
+{"rank":1026,"dbn":"17K399","name":"P.S. 399 STANLEY EUGENE CLARK","borough":"Brooklyn","nEla":63,"nMath":60,"ela":0.27,"math":0.217,"z":-1.276,"lo":887,"hi":1066},
+{"rank":1027,"dbn":"24Q014","name":"P.S. 014 FAIRVIEW","borough":"Queens","nEla":508,"nMath":518,"ela":0.211,"math":0.336,"z":-1.278,"lo":1000,"hi":1066},
+{"rank":1028,"dbn":"10X254","name":"I.S. 254","borough":"Bronx","nEla":393,"nMath":254,"ela":0.275,"math":0.26,"z":-1.279,"lo":981,"hi":1065},
+{"rank":1029,"dbn":"10X094","name":"P.S. 094 KINGS COLLEGE SCHOOL","borough":"Bronx","nEla":366,"nMath":374,"ela":0.219,"math":0.324,"z":-1.28,"lo":991,"hi":1061},
+{"rank":1030,"dbn":"07X018","name":"P.S. 018 JOHN PETER ZENGER","borough":"Bronx","nEla":125,"nMath":125,"ela":0.216,"math":0.304,"z":-1.284,"lo":930,"hi":1067},
+{"rank":1031,"dbn":"11X370","name":"LEADERS OF TOMORROW","borough":"Bronx","nEla":657,"nMath":575,"ela":0.324,"math":0.207,"z":-1.291,"lo":1000,"hi":1065},
+{"rank":1032,"dbn":"13K301","name":"RESTORATION ACADEMY","borough":"Brooklyn","nEla":77,"nMath":82,"ela":0.286,"math":0.207,"z":-1.291,"lo":932,"hi":1079},
+{"rank":1033,"dbn":"12X006","name":"P.S. 006 WEST FARMS","borough":"Bronx","nEla":177,"nMath":182,"ela":0.232,"math":0.286,"z":-1.31,"lo":973,"hi":1071},
+{"rank":1034,"dbn":"19K907","name":"LEGACY SCHOOL OF THE ARTS","borough":"Brooklyn","nEla":123,"nMath":125,"ela":0.301,"math":0.2,"z":-1.311,"lo":946,"hi":1071},
+{"rank":1035,"dbn":"05M514","name":"NEW DESIGN MIDDLE SCHOOL","borough":"Manhattan","nEla":87,"nMath":88,"ela":0.241,"math":0.25,"z":-1.315,"lo":930,"hi":1082},
+{"rank":1036,"dbn":"06M098","name":"P.S. 098 SHORAC KAPPOCK","borough":"Manhattan","nEla":87,"nMath":89,"ela":0.161,"math":0.337,"z":-1.316,"lo":901,"hi":1074},
+{"rank":1037,"dbn":"12X134","name":"P.S. 134 GEORGE F. BRISTOW","borough":"Bronx","nEla":184,"nMath":190,"ela":0.293,"math":0.216,"z":-1.318,"lo":979,"hi":1079},
+{"rank":1038,"dbn":"09X413","name":"BRONX HIGH SCHOOL FOR MEDICAL SCIENCE","borough":"Bronx","nEla":102,"nMath":65,"ela":0.294,"math":0.185,"z":-1.319,"lo":918,"hi":1065},
+{"rank":1039,"dbn":"04M038","name":"P.S. 38 ROBERTO CLEMENTE","borough":"Manhattan","nEla":42,"nMath":40,"ela":0.167,"math":0.275,"z":-1.325,"lo":845,"hi":1081},
+{"rank":1040,"dbn":"09X117","name":"I.S. 117 JOSEPH H. WADE","borough":"Bronx","nEla":247,"nMath":211,"ela":0.279,"math":0.232,"z":-1.325,"lo":984,"hi":1075},
+{"rank":1041,"dbn":"04M155","name":"P.S. 155 WILLIAM PACA","borough":"Manhattan","nEla":62,"nMath":61,"ela":0.177,"math":0.295,"z":-1.327,"lo":845,"hi":1076},
+{"rank":1042,"dbn":"19K678","name":"EAST NEW YORK MIDDLE SCHOOL OF EXCELLENCE","borough":"Brooklyn","nEla":232,"nMath":232,"ela":0.267,"math":0.241,"z":-1.336,"lo":1005,"hi":1073},
+{"rank":1043,"dbn":"10X032","name":"P.S. 032 BELMONT","borough":"Bronx","nEla":234,"nMath":236,"ela":0.248,"math":0.263,"z":-1.337,"lo":987,"hi":1076},
+{"rank":1044,"dbn":"27Q043","name":"P.S. 043","borough":"Queens","nEla":282,"nMath":252,"ela":0.259,"math":0.25,"z":-1.343,"lo":1002,"hi":1079},
+{"rank":1045,"dbn":"14K196","name":"P.S. 196 TEN EYCK","borough":"Brooklyn","nEla":111,"nMath":111,"ela":0.261,"math":0.225,"z":-1.346,"lo":961,"hi":1082},
+{"rank":1046,"dbn":"10X077","name":"BEDFORD PARK ELEMENTARY SCHOOL","borough":"Bronx","nEla":183,"nMath":186,"ela":0.202,"math":0.301,"z":-1.354,"lo":980,"hi":1075},
+{"rank":1047,"dbn":"12X300","name":"THE SCHOOL OF SCIENCE AND APPLIED LEARNING","borough":"Bronx","nEla":162,"nMath":165,"ela":0.247,"math":0.248,"z":-1.356,"lo":979,"hi":1072},
+{"rank":1048,"dbn":"05M371","name":"SCHOOL OF EARTH EXPLORATION AND DISCOVERY HARLEM (","borough":"Manhattan","nEla":53,"nMath":29,"ela":0.208,"math":0.207,"z":-1.362,"lo":858,"hi":1083},
+{"rank":1049,"dbn":"13K044","name":"P.S. 044 MARCUS GARVEY","borough":"Brooklyn","nEla":51,"nMath":52,"ela":0.137,"math":0.308,"z":-1.367,"lo":898,"hi":1071},
+{"rank":1050,"dbn":"15K015","name":"P.S. 015 PATRICK F. DALY","borough":"Brooklyn","nEla":125,"nMath":123,"ela":0.224,"math":0.26,"z":-1.369,"lo":991,"hi":1084},
+{"rank":1051,"dbn":"24Q419","name":"MS 419","borough":"Queens","nEla":619,"nMath":601,"ela":0.234,"math":0.273,"z":-1.376,"lo":1032,"hi":1074},
+{"rank":1052,"dbn":"30Q235","name":"ACADEMY FOR NEW AMERICANS","borough":"Queens","nEla":61,"nMath":78,"ela":0.197,"math":0.256,"z":-1.382,"lo":905,"hi":1089},
+{"rank":1053,"dbn":"31R046","name":"P.S. 046 ALBERT V. MANISCALCO","borough":"Staten Island","nEla":63,"nMath":64,"ela":0.238,"math":0.203,"z":-1.393,"lo":926,"hi":1082},
+{"rank":1054,"dbn":"13K307","name":"P.S. 307 DANIEL HALE WILLIAMS","borough":"Brooklyn","nEla":102,"nMath":100,"ela":0.216,"math":0.25,"z":-1.398,"lo":977,"hi":1087},
+{"rank":1055,"dbn":"12X047","name":"P.S. 047 JOHN RANDOLPH","borough":"Bronx","nEla":377,"nMath":386,"ela":0.239,"math":0.251,"z":-1.408,"lo":1034,"hi":1080},
+{"rank":1056,"dbn":"23K178","name":"P.S. 178 SAINT CLAIR MCKELWAY","borough":"Brooklyn","nEla":159,"nMath":120,"ela":0.195,"math":0.275,"z":-1.421,"lo":978,"hi":1084},
+{"rank":1057,"dbn":"12X057","name":"P.S. 057 CRESCENT","borough":"Bronx","nEla":163,"nMath":165,"ela":0.245,"math":0.224,"z":-1.421,"lo":1003,"hi":1086},
+{"rank":1058,"dbn":"28Q182","name":"P.S. 182 SAMANTHA SMITH","borough":"Queens","nEla":361,"nMath":358,"ela":0.219,"math":0.265,"z":-1.426,"lo":1033,"hi":1082},
+{"rank":1059,"dbn":"14K059","name":"P.S. 059 THE DAWN BEST SCHOOL","borough":"Brooklyn","nEla":110,"nMath":110,"ela":0.245,"math":0.209,"z":-1.427,"lo":995,"hi":1082},
+{"rank":1060,"dbn":"08X301","name":"M.S. 301 PAUL L. DUNBAR","borough":"Bronx","nEla":123,"nMath":123,"ela":0.268,"math":0.187,"z":-1.43,"lo":978,"hi":1088},
+{"rank":1061,"dbn":"16K243","name":"P.S. 243K- THE WEEKSVILLE SCHOOL","borough":"Brooklyn","nEla":67,"nMath":67,"ela":0.179,"math":0.254,"z":-1.433,"lo":960,"hi":1084},
+{"rank":1062,"dbn":"10X051","name":"THE BRONX STEM AND ARTS ACADEMY","borough":"Bronx","nEla":45,"nMath":45,"ela":0.2,"math":0.2,"z":-1.433,"lo":845,"hi":1082},
+{"rank":1063,"dbn":"19K089","name":"P.S. 089 CYPRESS HILLS","borough":"Brooklyn","nEla":264,"nMath":275,"ela":0.17,"math":0.309,"z":-1.44,"lo":1034,"hi":1085},
+{"rank":1064,"dbn":"23K671","name":"MOTT HALL BRIDGES ACADEMY","borough":"Brooklyn","nEla":166,"nMath":123,"ela":0.223,"math":0.236,"z":-1.444,"lo":1019,"hi":1088},
+{"rank":1065,"dbn":"14K157","name":"P.S./I.S. 157 THE BENJAMIN FRANKLIN HEALTH & SCIEN","borough":"Brooklyn","nEla":129,"nMath":127,"ela":0.233,"math":0.22,"z":-1.447,"lo":992,"hi":1087},
+{"rank":1066,"dbn":"04M072","name":"THE LEXINGTON ACADEMY","borough":"Manhattan","nEla":236,"nMath":232,"ela":0.216,"math":0.25,"z":-1.456,"lo":1024,"hi":1083},
+{"rank":1067,"dbn":"27Q106","name":"LIGHTHOUSE ELEMENTARY SCHOOL","borough":"Queens","nEla":66,"nMath":65,"ela":0.197,"math":0.215,"z":-1.474,"lo":942,"hi":1086},
+{"rank":1068,"dbn":"27Q333","name":"GOLDIE MAPLE ACADEMY","borough":"Queens","nEla":160,"nMath":157,"ela":0.244,"math":0.197,"z":-1.489,"lo":998,"hi":1084},
+{"rank":1069,"dbn":"31R018","name":"P.S. 018 JOHN G. WHITTIER","borough":"Staten Island","nEla":118,"nMath":119,"ela":0.203,"math":0.227,"z":-1.502,"lo":991,"hi":1093},
+{"rank":1070,"dbn":"24Q311","name":"CORONA ARTS & SCIENCES ACADEMY","borough":"Queens","nEla":709,"nMath":686,"ela":0.248,"math":0.207,"z":-1.508,"lo":1063,"hi":1090},
+{"rank":1071,"dbn":"32K291","name":"J.H.S. 291 ROLAND HAYES","borough":"Brooklyn","nEla":243,"nMath":245,"ela":0.214,"math":0.233,"z":-1.508,"lo":1040,"hi":1091},
+{"rank":1072,"dbn":"32K075","name":"P.S. 075 MAYDA CORTIELLA","borough":"Brooklyn","nEla":74,"nMath":74,"ela":0.203,"math":0.203,"z":-1.508,"lo":990,"hi":1088},
+{"rank":1073,"dbn":"29Q052","name":"P.S. 052 QUEENS","borough":"Queens","nEla":102,"nMath":103,"ela":0.225,"math":0.194,"z":-1.509,"lo":1017,"hi":1091},
+{"rank":1074,"dbn":"04M007","name":"P.S. 007 SAMUEL STERN","borough":"Manhattan","nEla":204,"nMath":197,"ela":0.23,"math":0.203,"z":-1.527,"lo":1039,"hi":1091},
+{"rank":1075,"dbn":"01M134","name":"P.S. 134 HENRIETTA SZOLD","borough":"Manhattan","nEla":69,"nMath":74,"ela":0.203,"math":0.189,"z":-1.534,"lo":990,"hi":1093},
+{"rank":1076,"dbn":"15K124","name":"P.S. 124 SILAS B. DUTCHER","borough":"Brooklyn","nEla":99,"nMath":100,"ela":0.232,"math":0.17,"z":-1.547,"lo":1012,"hi":1093},
+{"rank":1077,"dbn":"24Q016","name":"P.S. Q016 THE NANCY DEBENEDITTIS SCHOOL","borough":"Queens","nEla":542,"nMath":550,"ela":0.133,"math":0.313,"z":-1.558,"lo":1068,"hi":1093},
+{"rank":1078,"dbn":"24Q019","name":"P.S. 019 MARINO JEANTET","borough":"Queens","nEla":666,"nMath":659,"ela":0.183,"math":0.25,"z":-1.579,"lo":1076,"hi":1096},
+{"rank":1079,"dbn":"04M372","name":"ESPERANZA PREPARATORY MAGNET SCHOOL","borough":"Manhattan","nEla":154,"nMath":155,"ela":0.26,"math":0.142,"z":-1.582,"lo":1046,"hi":1097},
+{"rank":1080,"dbn":"09X042","name":"P.S. 042 CLAREMONT","borough":"Bronx","nEla":137,"nMath":140,"ela":0.182,"math":0.221,"z":-1.586,"lo":1049,"hi":1098},
+{"rank":1081,"dbn":"10X243","name":"WEST BRONX ACADEMY FOR THE FUTURE","borough":"Bronx","nEla":221,"nMath":194,"ela":0.262,"math":0.144,"z":-1.587,"lo":1057,"hi":1098},
+{"rank":1082,"dbn":"16K308","name":"P.S. 308 CLARA CARDWELL","borough":"Brooklyn","nEla":94,"nMath":94,"ela":0.202,"math":0.181,"z":-1.593,"lo":1030,"hi":1096},
+{"rank":1083,"dbn":"03M242","name":"P.S. 242 - THE YOUNG DIPLOMATS MAGNET ACADEMY","borough":"Manhattan","nEla":49,"nMath":51,"ela":0.184,"math":0.157,"z":-1.594,"lo":961,"hi":1098},
+{"rank":1084,"dbn":"27Q045","name":"P.S. 045 CLARENCE WITHERSPOON","borough":"Queens","nEla":147,"nMath":151,"ela":0.17,"math":0.232,"z":-1.6,"lo":1052,"hi":1097},
+{"rank":1085,"dbn":"09X058","name":"P.S. 058","borough":"Bronx","nEla":118,"nMath":121,"ela":0.169,"math":0.223,"z":-1.603,"lo":1040,"hi":1097},
+{"rank":1086,"dbn":"09X109","name":"P.S. 109 SEDGWICK","borough":"Bronx","nEla":153,"nMath":160,"ela":0.131,"math":0.262,"z":-1.634,"lo":1060,"hi":1099},
+{"rank":1087,"dbn":"10X059","name":"P.S. 059 THE COMMUNITY SCHOOL OF TECHNOLOGY","borough":"Bronx","nEla":162,"nMath":156,"ela":0.154,"math":0.237,"z":-1.635,"lo":1049,"hi":1096},
+{"rank":1088,"dbn":"09X274","name":"THE NEW AMERICAN ACADEMY AT ROBERTO CLEMENTE STATE","borough":"Bronx","nEla":156,"nMath":158,"ela":0.154,"math":0.234,"z":-1.642,"lo":1056,"hi":1100},
+{"rank":1089,"dbn":"09X073","name":"P.S. 073 BRONX","borough":"Bronx","nEla":109,"nMath":113,"ela":0.138,"math":0.23,"z":-1.663,"lo":1041,"hi":1099},
+{"rank":1090,"dbn":"27Q105","name":"P.S. 105 THE BAY SCHOOL","borough":"Queens","nEla":360,"nMath":357,"ela":0.175,"math":0.216,"z":-1.675,"lo":1079,"hi":1101},
+{"rank":1091,"dbn":"03M191","name":"THE RIVERSIDE SCHOOL FOR MAKERS AND ARTISTS","borough":"Manhattan","nEla":148,"nMath":116,"ela":0.189,"math":0.172,"z":-1.684,"lo":1059,"hi":1099},
+{"rank":1092,"dbn":"07X298","name":"ACADEMY OF PUBLIC RELATIONS","borough":"Bronx","nEla":114,"nMath":114,"ela":0.219,"math":0.132,"z":-1.69,"lo":1063,"hi":1101},
+{"rank":1093,"dbn":"23K298","name":"P.S. 298 DR. BETTY SHABAZZ","borough":"Brooklyn","nEla":124,"nMath":128,"ela":0.161,"math":0.195,"z":-1.699,"lo":1065,"hi":1102},
+{"rank":1094,"dbn":"09X313","name":"I.S. 313 SCHOOL OF LEADERSHIP DEVELOPMENT","borough":"Bronx","nEla":74,"nMath":75,"ela":0.203,"math":0.12,"z":-1.706,"lo":1048,"hi":1101},
+{"rank":1095,"dbn":"27Q253","name":"THE RANDOLPH HOLDER SCHOOL FOR SOCIAL JUSTICE","borough":"Queens","nEla":255,"nMath":252,"ela":0.18,"math":0.19,"z":-1.709,"lo":1080,"hi":1101},
+{"rank":1096,"dbn":"10X023","name":"P.S. 023 THE NEW CHILDREN'S SCHOOL","borough":"Bronx","nEla":137,"nMath":139,"ela":0.182,"math":0.151,"z":-1.76,"lo":1072,"hi":1102},
+{"rank":1097,"dbn":"04M096","name":"P.S. 096 JOSEPH LANZETTA","borough":"Manhattan","nEla":203,"nMath":203,"ela":0.133,"math":0.217,"z":-1.761,"lo":1080,"hi":1102},
+{"rank":1098,"dbn":"31R044","name":"P.S. 044 THOMAS C. BROWN","borough":"Staten Island","nEla":195,"nMath":194,"ela":0.103,"math":0.242,"z":-1.778,"lo":1085,"hi":1102},
+{"rank":1099,"dbn":"09X311","name":"LUCERO ELEMENTARY SCHOOL","borough":"Bronx","nEla":171,"nMath":176,"ela":0.135,"math":0.193,"z":-1.805,"lo":1083,"hi":1102},
+{"rank":1100,"dbn":"02M303","name":"FACING HISTORY SCHOOL, THE","borough":"Manhattan","nEla":88,"nMath":91,"ela":0.205,"math":0.088,"z":-1.806,"lo":1068,"hi":1102},
+{"rank":1101,"dbn":"30Q111","name":"P.S. 111 JACOB BLACKWELL","borough":"Queens","nEla":252,"nMath":259,"ela":0.171,"math":0.154,"z":-1.827,"lo":1090,"hi":1103},
+{"rank":1102,"dbn":"17K969","name":"CENTRAL BROOKLYN LITERACY ACADEMY (CBLA)","borough":"Brooklyn","nEla":20,"nMath":20,"ela":0.0,"math":0.05,"z":-1.911,"lo":942,"hi":1096},
+{"rank":1103,"dbn":"08X333","name":"THE LONGWOOD ACADEMY OF DISCOVERY","borough":"Bronx","nEla":193,"nMath":197,"ela":0.124,"math":0.122,"z":-2.02,"lo":1100,"hi":1104},
+{"rank":1104,"dbn":"07X642","name":"SOUTH BRONX LITERACY ACADEMY","borough":"Bronx","nEla":82,"nMath":81,"ela":0.085,"math":0.049,"z":-2.195,"lo":1102,"hi":1104}
+];
+
+const BOROUGHS = ["Bronx", "Brooklyn", "Manhattan", "Queens", "Staten Island"];
+const BOROUGH_COLOR = {
+  Bronx: "#f43f5e",
+  Brooklyn: "#3b82f6",
+  Manhattan: "#a855f7",
+  Queens: "#14b8a6",
+  "Staten Island": "#f59e0b"
+};
+
+const q = document.querySelector("#q");
+const borough = document.querySelector("#borough");
+const countEl = document.querySelector("#count");
+const tbody = document.querySelector("#rows");
+const svg = document.querySelector("#plot");
+const detailBody = document.querySelector("#detailBody");
+const hoverReadout = document.querySelector("#hoverReadout");
+const themeBtn = document.querySelector("#themeBtn");
+const legend = document.querySelector("#legend");
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const VB = { w: 640, h: 460, l: 92, r: 46, t: 22, b: 58 };
+
+let sortKey = "rank";
+let sortDir = 1;
+let selected = null;
+let visible = SCHOOLS.slice();
+
+function pct(x) {
+  return (Math.round(x * 1000) / 10).toFixed(1) + "%";
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+function X(v) { return VB.l + v * (VB.w - VB.l - VB.r); }
+function Y(v) { return VB.t + (1 - v) * (VB.h - VB.t - VB.b); }
+
+function currentRows() {
+  const query = q.value.trim().toLowerCase();
+  const boro = borough.value;
+  const rows = SCHOOLS.filter((s) => {
+    if (boro && s.borough !== boro) return false;
+    if (query && !s.name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+  rows.sort((a, c) => {
+    let cmp = 0;
+    if (sortKey === "name" || sortKey === "borough") {
+      cmp = a[sortKey].localeCompare(c[sortKey], "en", { sensitivity: "base" });
+    } else if (sortKey === "range") {
+      cmp = (a.lo - c.lo) || (a.hi - c.hi);
+    } else {
+      cmp = a[sortKey] - c[sortKey];
+    }
+    if (cmp === 0) cmp = a.rank - c.rank;
+    return cmp * sortDir;
+  });
+  return rows;
+}
+
+function renderHeaders() {
+  document.querySelectorAll("thead th").forEach((th) => {
+    const btn = th.querySelector("button");
+    const on = btn.dataset.key === sortKey;
+    th.setAttribute("aria-sort", on ? (sortDir > 0 ? "ascending" : "descending") : "none");
+    th.querySelector(".arrow").textContent = on ? (sortDir > 0 ? "\u25B2" : "\u25BC") : "";
+  });
+}
+
+function renderTable() {
+  if (!visible.length) {
+    tbody.innerHTML = '<tr><td class="empty" colspan="7">No schools match.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = visible.map((s) => {
+    const on = s.dbn === selected;
+    return `<tr data-dbn="${esc(s.dbn)}" class="${on ? "selected" : ""}" tabindex="0" aria-selected="${on ? "true" : "false"}">
+      <td class="num">${s.rank}</td>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.borough)}</td>
+      <td class="num">${pct(s.ela)}</td>
+      <td class="num">${pct(s.math)}</td>
+      <td class="num">${s.z.toFixed(3)}</td>
+      <td class="num">${s.lo}\u2013${s.hi}</td>
+    </tr>`;
+  }).join("");
+}
+
+function svgEl(name, attrs) {
+  const node = document.createElementNS(SVG_NS, name);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  return node;
+}
+
+function dot(s, on) {
+  const c = svgEl("circle", {
+    class: on ? "dot selected" : "dot",
+    cx: X(s.ela).toFixed(2),
+    cy: Y(s.math).toFixed(2),
+    r: on ? 7 : 3.4,
+    fill: BOROUGH_COLOR[s.borough]
+  });
+  const title = document.createElementNS(SVG_NS, "title");
+  title.textContent = s.name + " \u2014 ELA " + pct(s.ela) + ", Math " + pct(s.math);
+  c.appendChild(title);
+  return c;
+}
+
+function renderPlot() {
+  const nodes = [];
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    const x = X(t);
+    const y = Y(t);
+    nodes.push(svgEl("line", { class: "grid", x1: X(0), y1: y, x2: X(1), y2: y }));
+    nodes.push(svgEl("line", { class: "grid", x1: x, y1: Y(0), x2: x, y2: Y(1) }));
+    const xt = svgEl("text", { class: "tick", x: x, y: Y(0) + 20, "text-anchor": "middle" });
+    xt.textContent = Math.round(t * 100) + "%";
+    nodes.push(xt);
+    const yt = svgEl("text", { class: "tick", x: X(0) - 10, y: y + 4, "text-anchor": "end" });
+    yt.textContent = Math.round(t * 100) + "%";
+    nodes.push(yt);
+  }
+  nodes.push(svgEl("line", { class: "ref", x1: X(0), y1: Y(0), x2: X(1), y2: Y(1) }));
+  let sel = null;
+  for (const s of visible) {
+    if (s.dbn === selected) sel = s;
+    else nodes.push(dot(s, false));
+  }
+  if (sel) nodes.push(dot(sel, true));
+  svg.replaceChildren(...nodes);
+}
+
+function renderDetail() {
+  const s = SCHOOLS.find((d) => d.dbn === selected);
+  if (!s) {
+    detailBody.innerHTML = '<p class="placeholder">Click a row or a point to see that school.</p>';
+    return;
+  }
+  const shown = visible.some((d) => d.dbn === s.dbn);
+  detailBody.innerHTML =
+    `<h3>${esc(s.name)}</h3>` +
+    `<p class="meta">${esc(s.dbn)} \u00b7 ${esc(s.borough)}</p>` +
+    `<dl>` +
+      `<div><dt>Rank</dt><dd>${s.rank}</dd></div>` +
+      `<div><dt>Rank range (lo-hi)</dt><dd>${s.lo}\u2013${s.hi}</dd></div>` +
+      `<div><dt>ELA % proficient</dt><dd>${pct(s.ela)}<span class="sub">${s.nEla.toLocaleString()} tested</span></dd></div>` +
+      `<div><dt>Math % proficient</dt><dd>${pct(s.math)}<span class="sub">${s.nMath.toLocaleString()} tested</span></dd></div>` +
+      `<div><dt>Score (z)</dt><dd>${s.z.toFixed(3)}</dd></div>` +
+    `</dl>` +
+    (shown ? "" : '<p class="placeholder">Hidden by the current search or borough filter.</p>');
+}
+
+function render(scrollToSelected) {
+  visible = currentRows();
+  const noun = visible.length === 1 ? "school" : "schools";
+  countEl.textContent = visible.length.toLocaleString() + " " + noun;
+  renderHeaders();
+  renderTable();
+  renderPlot();
+  renderDetail();
+  if (scrollToSelected) {
+    const tr = tbody.querySelector("tr.selected");
+    if (tr) tr.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function selectSchool(dbn, fromChart) {
+  selected = dbn;
+  render(fromChart);
+}
+
+function nearest(evt, maxDist) {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  const p = svg.createSVGPoint();
+  p.x = evt.clientX;
+  p.y = evt.clientY;
+  const loc = p.matrixTransform(ctm.inverse());
+  if (loc.x < X(0) || loc.x > X(1) || loc.y < Y(1) || loc.y > Y(0)) return null;
+  let best = null;
+  let bestD = maxDist;
+  for (const s of visible) {
+    const d = Math.hypot(X(s.ela) - loc.x, Y(s.math) - loc.y);
+    if (d < bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+  return best;
+}
+
+function updateThemeButton() {
+  const dark = document.documentElement.getAttribute("data-theme") === "dark";
+  themeBtn.textContent = dark ? "Light mode" : "Dark mode";
+  themeBtn.setAttribute("aria-pressed", dark ? "true" : "false");
+}
+
+legend.innerHTML = BOROUGHS.map((b) =>
+  `<li><i style="background:${BOROUGH_COLOR[b]}"></i>${esc(b)}</li>`
+).join("");
+
+document.querySelectorAll("thead button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.key;
+    if (sortKey === key) sortDir *= -1;
+    else {
+      sortKey = key;
+      sortDir = (key === "ela" || key === "math" || key === "z") ? -1 : 1;
+    }
+    render(false);
+  });
+});
+
+q.addEventListener("input", () => render(false));
+borough.addEventListener("change", () => render(false));
+
+tbody.addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-dbn]");
+  if (tr) selectSchool(tr.dataset.dbn, false);
+});
+tbody.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tr = e.target.closest("tr[data-dbn]");
+  if (!tr) return;
+  e.preventDefault();
+  selectSchool(tr.dataset.dbn, false);
+});
+
+svg.addEventListener("click", (e) => {
+  const s = nearest(e, 24);
+  if (s) selectSchool(s.dbn, true);
+});
+svg.addEventListener("mousemove", (e) => {
+  const s = nearest(e, 24);
+  hoverReadout.textContent = s
+    ? s.name + " \u00b7 ELA " + pct(s.ela) + " \u00b7 Math " + pct(s.math)
+    : "Click a point to select a school.";
+});
+svg.addEventListener("mouseleave", () => {
+  hoverReadout.textContent = "Click a point to select a school.";
+});
+
+themeBtn.addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("school-rank-theme", next); } catch (err) {}
+  updateThemeButton();
+});
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+  let stored = null;
+  try { stored = localStorage.getItem("school-rank-theme"); } catch (err) {}
+  if (stored === "light" || stored === "dark") return;
+  document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+  updateThemeButton();
+});
+
+updateThemeButton();
+render(false);
+</script>
+</body>
+</html>
