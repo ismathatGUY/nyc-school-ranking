@@ -2,13 +2,15 @@
 
 A project that ranks NYC district schools using state test results. It cleans the data, adjusts for small schools, scores each school with z-scores, estimates how certain each rank is, and shows the results in a dashboard.
 
+Live dashboard: https://ismathatguy.github.io/nyc-school-ranking/
+
 By Ismael Kabore. I built it with help from AI tools (Claude and Cursor) and checked the results myself.
 
 ## What is in this repo
 
 1. pipeline.py: cleans the data, runs the checks, scores and ranks schools
 2. school_rankings_2026.csv: the ranked list with rank ranges
-3. dashboard.html: interactive page with search, borough filter, sortable table and scatter plot
+3. index.html: interactive page with search, borough filter, sortable table and scatter plot
 4. qa_log.txt: output of the data checks
 5. executive_summary.md: one page summary for leaders
 
@@ -26,7 +28,7 @@ I used the "ELA - All" and "Math - All" sheets and only 2023 to 2026, because th
 1. Install the tools: pip install pandas numpy scipy openpyxl
 2. Put the two Excel files in the data folder
 3. Run: python pipeline.py
-4. Open dashboard.html in a browser
+4. Open index.html in a browser
 
 ## Method
 
